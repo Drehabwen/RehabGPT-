@@ -5,6 +5,7 @@ import { ChatPage } from './pages/ChatPage';
 import { PrescriptionsPage } from './pages/PrescriptionsPage';
 import { ResultPage } from './pages/ResultPage';
 import { TrackingPage } from './pages/TrackingPage';
+import { ScalesPage } from './pages/ScalesPage';
 import { useChatbotStore } from './chatbot/store/useChatbotStore';
 import { useAgentStore } from './chatbot/store/useAgentStore';
 
@@ -36,6 +37,10 @@ function App() {
         <Route
           path="/tracking"
           element={patientId ? <TrackingPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/scales"
+          element={patientId ? <ScalesPage /> : <Navigate to="/" />}
         />
       </Routes>
     </BrowserRouter>

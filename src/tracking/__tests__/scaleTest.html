@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>量表系统集成测试</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 20px; color: #1e293b; margin-bottom: 8px; }
+    .subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
+    .controls {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #059669; }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    .config {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .config label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .config input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .log {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+      min-height: 400px;
+      max-height: 600px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log .step { color: #60a5fa; font-weight: bold; margin-top: 12px; }
+    .log .success { color: #34d399; }
+    .log .error { color: #f87171; }
+    .log .info { color: #fbbf24; }
+    .log .divider { color: #475569; }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .status.pass { background: #d1fae5; color: #065f46; }
+    .status.fail { background: #fee2e2; color: #991b1b; }
+    .status.running { background: #dbeafe; color: #1e40af; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 量表系统集成测试</h1>
+    <p class="subtitle">模拟康复师下发量表 → 家长填写 → 提交 → 查看结果的完整流程</p>
+
+    <div class="controls">
+      <div class="config">
+        <div>
+          <label>后端地址</label>
+          <input type="text" id="baseUrl" value="http://localhost:8002" />
+        </div>
+        <div>
+          <label>患者ID</label>
+          <input type="text" id="patientId" value="TEST_PATIENT_001" />
+        </div>
+        <div>
+          <label>患者姓名</label>
+          <input type="text" id="patientName" value="王测试" />
+        </div>
+        <div>
+          <label>量表类型</label>
+          <input type="text" id="scaleId" value="SRS-22" readonly />
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button id="runBtn" onclick="runTest()">▶ 运行测试</button>
+        <button onclick="clearLog()" style="background:#64748b;">清空日志</button>
+        <span id="statusBadge"></span>
+      </div>
+    </div>
+
+    <div class="log" id="log">等待测试开始...</div>
+  </div>
+
+  <script>
+    const BASE_URL = document.getElementById('baseUrl').value;
+    let taskId = null;
+    let sessionId = null;
+
+    function log(type, message) {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString('zh-CN');
+      const prefix = type === 'step' ? '▶' : type === 'success' ? '✅' : type === 'error' ?

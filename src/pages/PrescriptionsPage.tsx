@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, CheckCircle2, Clock, MessageCircle, Send, AlertCircle, Sparkles, Activity } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, MessageCircle, Send, AlertCircle, Sparkles, Activity, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useChatbotStore } from '../chatbot/store/useChatbotStore';
 import { AppLayout } from '../chatbot/components/AppLayout';
@@ -122,6 +122,13 @@ export const PrescriptionsPage: React.FC = () => {
       >
         <Activity size={20} />
         <span className="text-[10px] tracking-wide">日常追踪</span>
+      </button>
+      <button
+        onClick={() => navigate('/scales')}
+        className="flex flex-col items-center gap-1 px-6 py-1.5 rounded-xl text-slate-400 hover:text-emerald-700 font-medium transition-all cursor-pointer"
+      >
+        <ClipboardList size={20} />
+        <span className="text-[10px] tracking-wide">量表中心</span>
       </button>
     </div>
   );
