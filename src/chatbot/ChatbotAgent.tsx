@@ -6,14 +6,15 @@
  * - adams_camera: Adams 弯腰摄像头检测
  * - result: 风险评估结果
  */
-import React, { useCallback } from 'react';
-import { Save, RotateCcw } from 'lucide-react';
+import React, { useCallback, useEffect } from 'react';
+import { Save, RotateCcw, HeartPulse } from 'lucide-react';
 import { ChatWindow } from './components/ChatWindow';
 import { AdamsCameraView } from './components/AdamsCameraView';
 import { RiskResult } from './components/RiskResult';
 import { useChatbotStore } from './store/useChatbotStore';
 import { useAgentStore } from './store/useAgentStore';
-import { createScreeningRecord } from '@/api/screeningApi';
+import { createScreeningRecord } from '../api/screeningApi';
+import { GlassCard, Button, StatusBadge } from './ui';
 
 interface ChatbotAgentProps {
   patientId: string;
@@ -26,12 +27,19 @@ export const ChatbotAgent: React.FC<ChatbotAgentProps> = ({
   patientName,
   patientAge,
 }) => {
-  const view = useChatbotStore((s) => s.view);
-  const riskResult = useChatbotStore((s) => s.riskResult);
-  const stepIndex = useChatbotStore((s) => s.stepIndex);
-  const answers = useChatbotStore((s) => s.answers);
-  const totalSteps = useChatbotStore((s) => s.getTotalSteps());
+  // Read view/riskResult/answers from useAgentStore (single source of truth)
+  // avoids camera view desync bug where closeCamera only updated agentStore
+  const view = useAgentStore((s) => s.view);
+  const riskResult = useAgentStore((s) => s.riskResult);
+  const answers = useAgentStore((s) => s.answers);
   const resetFlow = useChatbotStore((s) => s.resetFlow);
+
+  // 初始化 Agent 随随访患者上下文
+  useEffect(() => {
+    if (patientId && patientName) {
+      useAgentStore.getState().initWithPatient(patientId, patientName, patientAge);
+    }
+  }, [patientId, patientName, patientAge]);
 
   // ── 保存筛查结果到后端 ──
   const handleSaveResult = useCallback(async () => {
@@ -77,53 +85,89 @@ export const ChatbotAgent: React.FC<ChatbotAgentProps> = ({
   // ── Result View ──
   if (view === 'result' && riskResult) {
     return (
-      <div className="h-full flex flex-col bg-slate-50">
-        <div className="flex-shrink-0 mx-4 mt-4 px-5 py-4 rounded-2xl border border-white/70 bg-white/90 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">孩子脊柱健康报告</h2>
-          <p className="mt-1 text-xs text-slate-400">
-            {patientName || '孩子'} · {patientAge ? `${patientAge} 岁` : '年龄未知'}
-          </p>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto mx-4 mt-3 mb-6 rounded-2xl border border-slate-200/80 bg-white/94 shadow-sm p-4 custom-scrollbar">
+      <div className="flex-1 min-h-0 flex flex-col bg-transparent">
+        {/* Soft floating glass panel for profile */}
+        <GlassCard
+          className="flex-shrink-0 mx-4 mt-3 px-5 py-4 flex items-center justify-between"
+          style={{ borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)' }}
+        >
+          <div>
+            <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-1.5">
+              <HeartPulse size={18} className="text-emerald-600 animate-pulse" />
+              孩子脊柱健康报告
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-450 font-medium">
+              {patientName || '孩子'} · {patientAge ? `${patientAge} 岁` : '年龄未知'}
+            </p>
+          </div>
+          <StatusBadge status="success">筛查完成</StatusBadge>
+        </GlassCard>
+
+        {/* Main report body */}
+        <GlassCard
+          className="flex-1 min-h-0 overflow-y-auto mx-4 mt-3 mb-4 p-5 custom-scrollbar"
+          style={{ borderRadius: '24px', display: 'flex', flexDirection: 'column' }}
+        >
           <RiskResult result={riskResult} />
-          <div className="flex flex-col gap-2 mt-4">
-            <button
-              type="button"
+
+          <div className="flex flex-col gap-2 mt-5">
+            <Button
+              variant="primary"
+              size="lg"
               onClick={handleSaveResult}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm transition-all hover:bg-blue-700 active:scale-[0.98]"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: 'linear-gradient(to right, #10b981, #0d9488)',
+              }}
             >
               <Save size={16} />
-              保存检查结果
-            </button>
-            <button
-              type="button"
+              保存检查结果，同步至工作台
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={resetFlow}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-slate-300 bg-white text-slate-600 font-medium text-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
               <RotateCcw size={16} />
               重新筛查
-            </button>
+            </Button>
           </div>
-        </div>
+        </GlassCard>
       </div>
     );
   }
 
   // ── Default: Chat View ──
   return (
-    <div className="h-full flex flex-col bg-slate-50">
-      <div className="flex-shrink-0 mx-4 mt-4 px-5 py-3 rounded-2xl border border-white/70 bg-white/90 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">
-          {patientName || '孩子'} 的脊柱健康
-        </h2>
-        <p className="mt-0.5 text-xs text-slate-400">
-          {patientAge ? `${patientAge} 岁 · ` : ''}
-          小柱帮您关注孩子的脊柱健康
-        </p>
-      </div>
-      <div className="flex-1 min-h-0 mx-4 mt-3 mb-4 rounded-2xl border border-slate-200/80 bg-white/94 shadow-sm overflow-hidden flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col bg-transparent">
+      {/* Top soft card */}
+      <GlassCard
+        className="flex-shrink-0 mx-4 mt-3 px-5 py-3 flex items-center justify-between"
+        style={{ borderRadius: '24px', border: '1px solid rgba(255,255,255,0.8)' }}
+      >
+        <div>
+          <h2 className="text-sm font-extrabold text-slate-800">
+            {patientName || '孩子'} 的脊柱健康
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-450 font-medium">
+            {patientAge ? `${patientAge} 岁 · ` : ''}小柱为您与康复师搭建直通桥梁
+          </p>
+        </div>
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shadow-sm shadow-emerald-400" />
+      </GlassCard>
+
+      {/* Message Area */}
+      <GlassCard
+        className="flex-1 min-h-0 mx-4 mt-3 mb-3 overflow-hidden flex flex-col"
+        style={{ borderRadius: '24px' }}
+      >
         <ChatWindow />
-      </div>
+      </GlassCard>
     </div>
   );
 };

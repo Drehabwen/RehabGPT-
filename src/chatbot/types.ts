@@ -13,6 +13,12 @@ export interface ChatMessage {
   imageUrl?: string;
   /** LLM tool_call 数据，用于渲染内嵌确认卡片 */
   toolCall?: { toolId: string; reason: string };
+  /** 康复评估量表推送卡片 payload */
+  scalePayload?: {
+    taskId: string;
+    sessionId: string;
+    scaleId: 'SRS-22' | 'ODI' | 'VAS';
+  };
 }
 
 // ── 流程步骤类型 ──
@@ -25,6 +31,10 @@ export type FlowStepType =
   | 'camera'
   | 'result'
   | 'auto';
+
+// ── 用户答案 ──
+export type AnswerValue = string | number | boolean | undefined;
+export type Answers = Record<string, AnswerValue>;
 
 // ── 流程步骤定义 ──
 export interface FlowStep {
@@ -41,11 +51,8 @@ export interface FlowStep {
   sliderStep?: number;
   sliderLabels?: { value: number; label: string }[];
   imageUrl?: string;
-  skipCondition?: (answers: Record<string, string | number | boolean>) => boolean;
+  skipCondition?: (answers: Answers) => boolean;
 }
-
-// ── 用户答案 ──
-export type Answers = Record<string, string | number | boolean>;
 
 // ── 风险等级 ──
 export type RiskLevel = 'low' | 'mild' | 'moderate' | 'high';

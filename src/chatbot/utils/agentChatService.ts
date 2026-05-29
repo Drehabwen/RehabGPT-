@@ -6,8 +6,8 @@
 import type { AgentToolId } from '../store/useAgentStore';
 
 // ── API 配置 ──
-const API_BASE = 'http://localhost:8003';
-const WS_BASE = 'ws://localhost:8003';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+const WS_BASE = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
 const CHAT_TIMEOUT = 15000; // 15 秒（对话需要更快响应）
 const API_TIMEOUT = 30000; // 30 秒（工具/数据操作）
 const HEALTH_TIMEOUT = 5000; // 5 秒
@@ -32,6 +32,8 @@ export interface ChatRequest {
   messages: ChatMessage[];
   patientContext: PatientContext;
   availableTools?: AgentToolId[];
+  /** 动态系统提示词 — 包含角色定义、患者上下文、阶段指引、工具说明 */
+  systemPrompt?: string;
 }
 
 export interface ToolCall {
@@ -97,6 +99,62 @@ export interface SessionSummary {
   patientName: string;
   summary: string;
   source: string;
+}
+
+// ── 编码修复工具 ──
+function fixEncoding(text: string): string {
+  try {
+    // 修复常见的编码问题
+    return text
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã¨/g, 'è')
+      .replace(/Ã /g, 'à')
+      .replace(/Ã´/g, 'ô')
+      .replace(/Ãª/g, 'ê')
+      .replace(/Ã§/g, 'ç')
+      .replace(/Ã¹/g, 'ù')
+      .replace(/Ã¦/g, 'æ')
+      .replace(/Ã¯/g, 'ï')
+      .replace(/Ã¼/g, 'ü')
+      .replace(/ÃŸ/g, 'ß')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã¢/g, 'â')
+      .replace(/Ã£/g, 'ã')
+      .replace(/Ã¤/g, 'ä')
+      .replace(/Ã¥/g, 'å')
+      .replace(/Ã¦/g, 'æ')
+      .replace(/Ã§/g, 'ç')
+      .replace(/Ã¨/g, 'è')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ãª/g, 'ê')
+      .replace(/Ã«/g, 'ë')
+      .replace(/Ã¬/g, 'ì')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã®/g, 'î')
+      .replace(/Ã¯/g, 'ï')
+      .replace(/Ã°/g, 'ð')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã²/g, 'ò')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ã´/g, 'ô')
+      .replace(/Ãµ/g, 'õ')
+      .replace(/Ã¶/g, 'ö')
+      .replace(/Ã·/g, '÷')
+      .replace(/Ã¸/g, 'ø')
+      .replace(/Ã¹/g, 'ù')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã»/g, 'û')
+      .replace(/Ã¼/g, 'ü')
+      .replace(/Ã½/g, 'ý')
+      .replace(/Ã¾/g, 'þ')
+      .replace(/Ã¿/g, 'ÿ');
+  } catch {
+    return text;
+  }
 }
 
 // ── 连续失败计数器 ──
@@ -186,18 +244,34 @@ export function sendChatMessageStream(
   const ws = new WebSocket(`${WS_BASE}/api/chatbot/ws/chat`);
 
   let closed = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  
   const close = () => {
     if (!closed) {
       closed = true;
+      if (timeoutId) clearTimeout(timeoutId);
       ws.close();
     }
   };
 
+  // 10秒超时处理 - 如果连接不上或没响应，自动报错
+  timeoutId = setTimeout(() => {
+    if (!closed) {
+      closed = true;
+      callbacks.onError('连接超时，请检查网络或稍后重试');
+      ws.close();
+    }
+  }, 10000);
+
   ws.onopen = () => {
+    // 连接成功后清除超时
+    if (timeoutId) clearTimeout(timeoutId);
+    
     ws.send(JSON.stringify({
       messages: req.messages,
       patientContext: req.patientContext,
       availableTools: req.availableTools || [],
+      systemPrompt: req.systemPrompt,
     }));
   };
 
@@ -207,16 +281,20 @@ export function sendChatMessageStream(
       const data = JSON.parse(event.data);
       switch (data.type) {
         case 'token':
-          callbacks.onToken(data.content);
+          callbacks.onToken(fixEncoding(data.content));
           break;
         case 'done':
           resetFailureCount();
-          callbacks.onDone(data.result as ChatResponse);
+          const result = data.result as ChatResponse;
+          if (result.content) {
+            result.content = fixEncoding(result.content);
+          }
+          callbacks.onDone(result);
           close();
           break;
         case 'error':
           consecutiveFailures++;
-          callbacks.onError(data.content);
+          callbacks.onError(fixEncoding(data.content));
           close();
           break;
       }

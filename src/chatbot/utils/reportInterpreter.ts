@@ -20,7 +20,7 @@ export interface InterpretResponse {
 }
 
 // ── API 配置 ──
-const API_BASE = 'http://localhost:8003';
+const API_BASE = '';
 const API_TIMEOUT = 30000; // 30 秒超时
 
 /**

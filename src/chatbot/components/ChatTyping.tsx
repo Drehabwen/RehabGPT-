@@ -1,15 +1,75 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Brain, Sparkles, Clock, Zap } from 'lucide-react';
+
+interface ChatTypingProps {
+  isCached?: boolean;
+  startTime?: number;
+}
 
 /**
- * 三点头打字指示器
- * 用于表示 bot 正在输入中
+ * 智能思考指示器
+ * 让用户明确知道：小柱正在"思考"，不是卡死了
  */
-export const ChatTyping: React.FC = () => {
+export const ChatTyping: React.FC<ChatTypingProps> = ({ isCached = false, startTime = Date.now() }) => {
+  const [elapsed, setElapsed] = useState(0);
+  const [stage, setStage] = useState(0);
+
+  const stages = [
+    { icon: Brain, text: '小柱正在理解您的问题...', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { icon: Sparkles, text: '正在分析孩子的脊柱健康情况...', color: 'text-blue-500', bg: 'bg-blue-50' },
+    { icon: Clock, text: '生成专业康复建议...', color: 'text-amber-500', bg: 'bg-amber-50' },
+    { icon: Sparkles, text: '马上就好，请稍候...', color: 'text-purple-500', bg: 'bg-purple-50' },
+  ];
+
+  useEffect(() => {
+    if (isCached) return;
+
+    const timer = setInterval(() => {
+      const seconds = Math.floor((Date.now() - startTime) / 1000);
+      setElapsed(seconds);
+      
+      // 每2秒切换一个阶段
+      const stageIndex = Math.min(Math.floor(seconds / 2), stages.length - 1);
+      setStage(stageIndex);
+    }, 500);
+
+    return () => clearInterval(timer);
+  }, [startTime, isCached]);
+
+  if (isCached) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 rounded-2xl chat-bubble-bot max-w-[200px] mb-4 bg-emerald-50 border border-emerald-100">
+        <Zap size={16} className="text-emerald-500 animate-pulse" />
+        <span className="text-sm text-emerald-600 font-medium">闪电回复中...</span>
+      </div>
+    );
+  }
+
+  const currentStage = stages[stage];
+  const Icon = currentStage.icon;
+
   return (
-    <div className="flex gap-2 items-center px-4 py-3 rounded-2xl chat-bubble-bot max-w-[100px] mb-4">
-      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl chat-bubble-bot max-w-[320px] mb-4 ${currentStage.bg} border border-slate-100`}>
+      <div className="relative">
+        <Icon size={20} className={`${currentStage.color} animate-pulse`} />
+        {/* 脉冲光环 */}
+        <span className={`absolute inset-0 rounded-full ${currentStage.color.replace('text-', 'bg-')} opacity-20 animate-ping`} />
+      </div>
+      <div className="flex flex-col gap-1.5 min-w-[200px]">
+        <span className="text-xs text-slate-600 font-medium">{currentStage.text}</span>
+        <div className="flex items-center gap-2">
+          {/* 进度条 */}
+          <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${currentStage.color.replace('text-', 'bg-')} rounded-full transition-all duration-500`}
+              style={{ 
+                width: `${Math.min((elapsed / 6) * 100, 100)}%`,
+              }}
+            />
+          </div>
+          <span className="text-[10px] text-slate-400 w-8 text-right">{elapsed}s</span>
+        </div>
+      </div>
     </div>
   );
 };

@@ -26,7 +26,7 @@ export const ChatOptions: React.FC<ChatOptionsProps> = ({
           type="button"
           disabled={disabled}
           onClick={() => onSelect(option.value)}
-          className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 transition-all hover:border-blue-600 hover:text-blue-600 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          className="px-4.5 py-2.5 rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-650 transition-all hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
         >
           {option.label}
         </button>

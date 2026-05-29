@@ -6,7 +6,6 @@
  */
 import React from 'react';
 import { Activity, Layers, ClipboardCheck, Camera, Heart } from 'lucide-react';
-import type { AgentToolId } from '../store/useAgentStore';
 
 interface ToolConfirmCardProps {
   toolId: string;

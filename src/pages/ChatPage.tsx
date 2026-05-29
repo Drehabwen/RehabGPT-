@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, MessageCircle, ArrowLeft } from 'lucide-react';
-import { ChatbotAgent } from '@/chatbot/ChatbotAgent';
-import { useChatbotStore } from '@/chatbot/store/useChatbotStore';
+import { FileText, MessageCircle, Activity } from 'lucide-react';
+import { ChatbotAgent } from '../chatbot/ChatbotAgent';
+import { useChatbotStore } from '../chatbot/store/useChatbotStore';
+import { AppLayout } from '../chatbot/components/AppLayout';
 
 export const ChatPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,56 +12,56 @@ export const ChatPage: React.FC = () => {
   const answers = useChatbotStore((s) => s.answers);
   const patientAge = (answers.age as number) || null;
 
-  return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-white/90 border-b border-slate-200/60 backdrop-blur-sm">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          返回
-        </button>
-        <span className="text-sm font-semibold text-slate-700">
-          小柱
-        </span>
-        <button
-          onClick={() => navigate('/prescriptions')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
-        >
-          <FileText size={15} />
-          处方
-        </button>
-      </div>
+  const headerRight = (
+    <button
+      onClick={() => navigate('/prescriptions')}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-750 bg-emerald-50 hover:bg-emerald-100/80 transition-all active:scale-95 cursor-pointer"
+    >
+      <FileText size={14} />
+      康复处方
+    </button>
+  );
 
-      {/* Main content */}
-      <div className="flex-1 min-h-0">
-        <ChatbotAgent
-          patientId={patientId}
-          patientName={patientName}
-          patientAge={patientAge}
-        />
-      </div>
-
-      {/* Bottom navigation */}
-      <div className="flex-shrink-0 flex items-center justify-around px-4 py-2 bg-white/95 border-t border-slate-200/60 backdrop-blur-sm">
-        <button
-          onClick={() => navigate('/chat')}
-          className="flex flex-col items-center gap-0.5 px-6 py-1.5 rounded-lg text-blue-600"
-        >
-          <MessageCircle size={20} />
-          <span className="text-[10px] font-medium">对话</span>
-        </button>
-        <button
-          onClick={() => navigate('/prescriptions')}
-          className="flex flex-col items-center gap-0.5 px-6 py-1.5 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
-        >
-          <FileText size={20} />
-          <span className="text-[10px] font-medium">处方</span>
-        </button>
-      </div>
+  const footer = (
+    <div className="flex items-center justify-around px-4 py-2.5 bg-white/90 border-t border-slate-100/80 backdrop-blur-md shadow-lg shadow-slate-100 select-none">
+      <button
+        onClick={() => navigate('/chat')}
+        className="flex flex-col items-center gap-1 px-6 py-1.5 rounded-xl text-emerald-700 font-bold transition-all cursor-pointer"
+      >
+        <MessageCircle size={20} className="stroke-[2.5]" />
+        <span className="text-[10px] tracking-wide">智能对话</span>
+      </button>
+      <button
+        onClick={() => navigate('/prescriptions')}
+        className="flex flex-col items-center gap-1 px-6 py-1.5 rounded-xl text-slate-400 hover:text-emerald-700 font-medium transition-all cursor-pointer"
+      >
+        <FileText size={20} />
+        <span className="text-[10px] tracking-wide">执行处方</span>
+      </button>
+      <button
+        onClick={() => navigate('/tracking')}
+        className="flex flex-col items-center gap-1 px-6 py-1.5 rounded-xl text-slate-400 hover:text-emerald-700 font-medium transition-all cursor-pointer"
+      >
+        <Activity size={20} />
+        <span className="text-[10px] tracking-wide">日常追踪</span>
+      </button>
     </div>
+  );
+
+  return (
+    <AppLayout
+      title="小柱智能助手"
+      backPath="/"
+      headerRight={headerRight}
+      footer={footer}
+      disableScroll
+    >
+      <ChatbotAgent
+        patientId={patientId}
+        patientName={patientName}
+        patientAge={patientAge}
+      />
+    </AppLayout>
   );
 };
 
