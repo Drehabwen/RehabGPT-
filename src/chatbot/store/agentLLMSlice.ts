@@ -1,8 +1,10 @@
 /**
  * Agent LLM Slice — LLM 集成 + 自由文本对话
  *
- * 职责：LLM 可用性检测、HTTP/WebSocket 对话、工具调用解析、
- *       跨天会话收敛、LLM 上下文构建
+ * 改进点：
+ * 1. 使用精简版自适应系统提示词（~600-1200 tokens，原 ~8000+）
+ * 2. Token 感知的历史消息截断（替代简单的 slice(-20)）
+ * 3. 上下文预算管理（预留响应空间 + 安全余量）
  */
 import { nanoid } from 'nanoid';
 import type { ChatMessage } from '../types';
@@ -17,7 +19,15 @@ import {
   startToolSession,
   type PatientContext,
 } from '../utils/agentChatService';
-import { AGENT_PERSONA, buildSystemPrompt, buildUserMessage, type LLMContext, type ConversationPhase } from '../prompts';
+// 新的精简提示词系统
+import {
+  buildAdaptiveSystemPrompt,
+  buildUserMessage,
+  type LLMContext,
+  type ConversationPhase,
+} from '../prompts/adaptiveSystemPrompt';
+import { countTokens } from '../utils/tokenCounter';
+import { buildLLMMessages, getTruncationStats } from '../utils/contextWindow';
 import { responseCache } from '../utils/responseCache';
 import { BRANCH_FLOWS } from '../constants/branches';
 
@@ -74,8 +84,7 @@ function buildLLMContext(state: AgentState): LLMContext {
 }
 
 /**
- * 每日会话收敛与记忆压缩：
- * 检查最后一条消息是否属于过去日期，如果是则调用后端 API 压缩摘要。
+ * 每日会话收敛与记忆压缩
  */
 async function consolidateSessionIfNewDay(
   messages: ChatMessage[],
@@ -102,9 +111,17 @@ async function consolidateSessionIfNewDay(
         const formattedDate = new Date(lastMsg.timestamp).toISOString().split('T')[0];
         const newSummaryBlock = `[${formattedDate}] 居家总结: ${summaryResult.summary}`;
 
-        const updatedSummary = lastAssessmentSummary
+        // 限制摘要长度，防止无限增长
+        const maxSummaryLength = 500;
+        let updatedSummary = lastAssessmentSummary
           ? `${lastAssessmentSummary}\n${newSummaryBlock}`
           : newSummaryBlock;
+
+        if (updatedSummary.length > maxSummaryLength) {
+          // 保留最近的摘要
+          const lines = updatedSummary.split('\n');
+          updatedSummary = lines.slice(-3).join('\n'); // 只保留最近3条
+        }
 
         set({
           messages: [],
@@ -158,7 +175,7 @@ export function createAgentLLMSlice(
       );
 
       const state = get();
-      const { patientName, patientAge, hasDueReminder, messages } = state;
+      const { patientName, patientAge, hasDueReminder } = state;
 
       if (shouldFallback()) {
         set({ llmAvailable: false });
@@ -180,9 +197,22 @@ export function createAgentLLMSlice(
         llmProcessing: true,
       }));
 
+      // 使用新的精简提示词系统
       const llmContext = buildLLMContext(state);
-      const systemPrompt = buildSystemPrompt(llmContext);
+      const systemPrompt = buildAdaptiveSystemPrompt(llmContext);
       const userMessage = buildUserMessage(text, llmContext);
+
+      // Token 感知的消息构建
+      const llmMessages = buildLLMMessages(
+        systemPrompt,
+        state.messages,
+        userMessage,
+      );
+
+      // 调试：记录 token 使用情况
+      const systemTokens = countTokens(systemPrompt);
+      const totalInputTokens = llmMessages.reduce((sum, m) => sum + countTokens(m.content), 0);
+      console.log(`[LLM] System prompt: ${systemTokens} tokens, Total input: ${totalInputTokens} tokens`);
 
       const patientContext: PatientContext = {
         name: patientName || '孩子',
@@ -193,15 +223,9 @@ export function createAgentLLMSlice(
         lastAssessmentSummary: state.lastAssessmentSummary,
       };
 
-      const recentMessages = messages.slice(-20).map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.text,
-      }));
-      recentMessages.push({ role: 'user', content: userMessage });
-
       try {
         const response = await sendChatMessage({
-          messages: recentMessages,
+          messages: llmMessages,
           patientContext,
           availableTools: state.suggestedTools,
           systemPrompt,
@@ -216,7 +240,7 @@ export function createAgentLLMSlice(
               {
                 id: nanoid(8),
                 role: 'bot',
-                text: `${AGENT_PERSONA.name}暂时无法连接，让我用另一种方式帮您。`,
+                text: '小柱暂时无法连接，让我用另一种方式帮您。',
                 timestamp: Date.now(),
               },
             ],
@@ -256,7 +280,7 @@ export function createAgentLLMSlice(
       );
 
       const state = get();
-      const { patientName, patientAge, hasDueReminder, messages } = state;
+      const { patientName, patientAge, hasDueReminder } = state;
 
       if (shouldFallback()) {
         set({ llmAvailable: false });
@@ -304,9 +328,22 @@ export function createAgentLLMSlice(
         ],
       }));
 
+      // 使用新的精简提示词系统
       const llmContext = buildLLMContext(state);
-      const systemPrompt = buildSystemPrompt(llmContext);
+      const systemPrompt = buildAdaptiveSystemPrompt(llmContext);
       const userMessage = buildUserMessage(text, llmContext);
+
+      // Token 感知的消息构建
+      const llmMessages = buildLLMMessages(
+        systemPrompt,
+        state.messages,
+        userMessage,
+      );
+
+      // 调试：记录 token 使用情况和截断统计
+      const systemTokens = countTokens(systemPrompt);
+      const stats = getTruncationStats(state.messages, llmMessages.slice(1, -1) as unknown as ChatMessage[]);
+      console.log(`[LLM] System: ${systemTokens} tokens | History: ${stats.originalCount}→${stats.truncatedCount} msgs | Dropped: ${stats.droppedCount}`);
 
       const patientContext: PatientContext = {
         name: patientName || '孩子',
@@ -317,15 +354,9 @@ export function createAgentLLMSlice(
         lastAssessmentSummary: state.lastAssessmentSummary,
       };
 
-      const recentMessages = messages.slice(-20).map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.text,
-      }));
-      recentMessages.push({ role: 'user', content: userMessage });
-
       sendChatMessageStream(
         {
-          messages: recentMessages,
+          messages: llmMessages,
           patientContext,
           availableTools: state.suggestedTools as AgentToolId[],
           systemPrompt,
@@ -362,7 +393,7 @@ export function createAgentLLMSlice(
               llmProcessing: false,
               messages: s.messages.map((m) =>
                 m.id === botMsgId
-                  ? { ...m, text: `${AGENT_PERSONA.name}暂时无法连接，让我用另一种方式帮您。` }
+                  ? { ...m, text: '小柱暂时无法连接，让我用另一种方式帮您。' }
                   : m,
               ),
             }));
