@@ -6,6 +6,10 @@ import { PrescriptionsPage } from './pages/PrescriptionsPage';
 import { ResultPage } from './pages/ResultPage';
 import { TrackingPage } from './pages/TrackingPage';
 import { ScalesPage } from './pages/ScalesPage';
+import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { AssessmentPage } from './pages/assessment/AssessmentPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
+import { DataCenterPage } from './pages/data-center/DataCenterPage';
 import { useChatbotStore } from './chatbot/store/useChatbotStore';
 import { useAgentStore } from './chatbot/store/useAgentStore';
 
@@ -42,6 +46,11 @@ function App() {
           path="/scales"
           element={patientId ? <ScalesPage /> : <Navigate to="/" />}
         />
+        {/* 康复工作台路由 */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/assessment" element={<AssessmentPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/data-center" element={<DataCenterPage />} />
       </Routes>
     </BrowserRouter>
   );
