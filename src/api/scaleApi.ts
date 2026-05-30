@@ -55,6 +55,7 @@ export type ScaleData = StandardScaleData | CustomScaleData;
 export interface ScaleSubmitPayload {
   task_id: string;
   session_id: string;
+  patient_id?: string;
   scale_data: ScaleData;
 }
 

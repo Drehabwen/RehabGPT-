@@ -17,6 +17,8 @@ import {
 } from '../utils/agentChatService';
 import type { AgentState, AgentToolId } from './agentTypes';
 import { BOT_TYPING_DELAYS } from './agentTypes';
+// Phase D: 结构化上下文初始化
+import { useChildContextStore } from '../../context/ChildContextStore';
 
 // ── 共享工具函数 ──
 
@@ -164,6 +166,9 @@ export function createAgentCoreSlice(
         llmProcessing: false,
       });
 
+      // Phase D: 初始化结构化上下文（ChildContext）
+      useChildContextStore.getState().initialize(id, name, age ?? null, undefined);
+
       // Check LLM availability (non-blocking)
       get().checkLLMStatus().then((available) => {
         if (available) {
@@ -252,6 +257,8 @@ export function createAgentCoreSlice(
         llmAvailable: false,
         llmProcessing: false,
       });
+      // Phase D: 重置结构化上下文
+      useChildContextStore.getState().reset();
     },
 
     // ── Branch selection ──

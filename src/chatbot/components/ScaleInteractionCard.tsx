@@ -13,6 +13,7 @@ import {
   Sparkles,
   ChevronRightCircle
 } from 'lucide-react';
+import { useChatbotStore } from '../store/useChatbotStore';
 
 export interface ScaleAnswer {
   questionId: number;
@@ -225,6 +226,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
   onSubmitted
 }) => {
   const template = SCALE_TEMPLATES[scaleId] || SCALE_TEMPLATES['SRS-22'];
+  const patientId = useChatbotStore((s) => s.patientId);
   
   // States
   const [mode, setMode] = useState<'intro' | 'filling' | 'confirm'>('intro');
@@ -401,6 +403,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
         body: JSON.stringify({
           task_id: taskId,
           session_id: sessionId,
+          patient_id: patientId || undefined,
           scale_data: scaleData
         })
       });
@@ -419,7 +422,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
       setErrorMsg(err instanceof Error ? err.message : '同步回传失败，请检查网络！');
       setStatus('error');
     }
-  }, [answers, template, taskId, sessionId, onSubmitted]);
+  }, [answers, template, taskId, sessionId, patientId, onSubmitted]);
 
   // Render Completed / Success State
   if (status === 'success' && submittedData) {

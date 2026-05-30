@@ -126,6 +126,7 @@ export const ScaleForm: React.FC<ScaleFormProps> = ({ task, onComplete, onCancel
     const payload = {
       task_id: task.task_id,
       session_id: task.session_id,
+      patient_id: task.patient_id,
       scale_data: scaleData,
     };
 

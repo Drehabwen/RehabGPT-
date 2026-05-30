@@ -13,6 +13,8 @@ import { useTrackingStore } from '../../tracking/store/useTrackingStore';
 import type { TrackingSummary } from '../../tracking/types';
 import { useAssessmentSummary } from './useAssessmentSummary';
 import { useTreatmentPlan } from './useTreatmentPlan';
+// Phase D: 结构化上下文同步
+import { useChildContextStore } from '../../context/ChildContextStore';
 
 // ── Advice 解析：从 LLM 响应中提取建议和小贴士 ──
 
@@ -125,6 +127,52 @@ export function useChatPageData() {
   // ── Phase 3: 康复师推送数据 ──
   const { assessment, loading: assessmentLoading } = useAssessmentSummary(patientId);
   const { latestPlan, loading: planLoading } = useTreatmentPlan(patientId);
+
+  // Phase D: 同步 API 数据到 ChildContext
+  useEffect(() => {
+    if (assessment) {
+      const levelMap: Record<string, 'none' | 'low' | 'medium' | 'high'> = {
+        low: 'low', mild: 'low',
+        medium: 'medium', moderate: 'medium',
+        high: 'high',
+        none: 'none',
+      };
+      useChildContextStore.getState().setAssessment({
+        riskLevel: levelMap[assessment.risk_level] || 'none',
+        riskLabel: assessment.risk_label || '评估完成',
+        summaryText: assessment.summary_text || '',
+        concerns: assessment.concerns || [],
+        recommendations: assessment.recommendations || [],
+        assessedAt: assessment.created_at,
+      });
+    } else if (!assessmentLoading) {
+      // API 返回空（无评估）→ 保持 null
+      useChildContextStore.getState().setAssessment(null);
+    }
+  }, [assessment, assessmentLoading]);
+
+  useEffect(() => {
+    if (latestPlan) {
+      const actionMatches = latestPlan.plan_content.match(/[-*]\s*(.+?)(?:\n|$)/g) || [];
+      const keyActions = actionMatches.slice(0, 5).map((line) => {
+        const cleaned = line.replace(/^[-*]\s*/, '').trim();
+        const parts = cleaned.split(/[，,]\s*/);
+        return { name: parts[0] || cleaned.slice(0, 30), sets: parts[1] || '', note: parts[2] || '' };
+      });
+      const firstLine = latestPlan.plan_content.split('\n')[0]?.replace(/^#+\s*/, '') || '康复训练计划';
+      useChildContextStore.getState().setTreatment({
+        planId: latestPlan.plan_id,
+        therapistName: latestPlan.therapist_name || '康复师',
+        title: firstLine.slice(0, 40),
+        summaryText: latestPlan.plan_content.slice(0, 200),
+        keyActions,
+        durationWeeks: 4,
+        createdAt: latestPlan.created_at,
+      });
+    } else if (!planLoading) {
+      useChildContextStore.getState().setTreatment(null);
+    }
+  }, [latestPlan, planLoading]);
 
   // ── 本周打卡（从 tracking store 获取，useMemo 避免 selector 新引用重渲染） ──
   const dailyRecords = useTrackingStore((s) => s.dailyRecords);

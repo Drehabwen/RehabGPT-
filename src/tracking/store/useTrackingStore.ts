@@ -7,6 +7,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
+// Phase D: 结构化上下文同步
+import { useChildContextStore } from '../../context/ChildContextStore';
 import type {
   DailyTracking,
   WeeklyTracking,
@@ -178,6 +180,40 @@ export const useTrackingStore = create<TrackingState>()(
           lastSubmitted: data.date,
           isSubmitting: false,
         }));
+
+        // Phase D: 更新 ChildContext 进度
+        try {
+          const childCtxStore = useChildContextStore.getState();
+          const ctx = childCtxStore.context;
+          const now = new Date().toISOString().split('T')[0];
+
+          // 计算连续打卡天数
+          const lastDate = ctx.progress.lastCheckinDate;
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          const isConsecutive = lastDate === yesterdayStr || lastDate === now;
+          const streakDays = isConsecutive ? ctx.progress.streakDays + 1 : 1;
+
+          // 计算完成率
+          const completedDays = ctx.progress.completedDays + 1;
+          const totalDays = Math.max(ctx.progress.totalPlanDays, completedDays);
+          const complianceRate = Math.round((completedDays / totalDays) * 100);
+
+          // 计算疼痛趋势（近7天）
+          const painLevel = data.pain?.hasPain ? data.pain.level || 0 : 0;
+          childCtxStore.updateProgress({
+            completedDays,
+            streakDays,
+            lastCheckinDate: now,
+            avgPainLevel: painLevel,
+            painTrend: painLevel > ctx.progress.avgPainLevel ? 'worsening' : painLevel < ctx.progress.avgPainLevel ? 'improving' : 'stable',
+            recentMood: data.mood != null ? [String(data.mood)] : [],
+            complianceRate,
+          });
+        } catch (err) {
+          console.warn('[TrackingStore] ChildContext update failed:', err);
+        }
 
         // Phase 3: 静默同步到后端（失败不影响本地保存）
         const apiBase = import.meta.env.VITE_API_BASE || '';

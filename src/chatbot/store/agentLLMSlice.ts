@@ -2,9 +2,9 @@
  * Agent LLM Slice — LLM 集成 + 自由文本对话
  *
  * 改进点：
- * 1. 使用精简版自适应系统提示词（~600-1200 tokens，原 ~8000+）
- * 2. Token 感知的历史消息截断（替代简单的 slice(-20)）
- * 3. 上下文预算管理（预留响应空间 + 安全余量）
+ * 1. 使用结构化上下文模型 + 意图路由 + 动态注入（~200-570 tokens）
+ * 2. Token 感知的历史消息截断
+ * 3. 对话后异步要点提取（闭环回写 ChildContext）
  */
 import { nanoid } from 'nanoid';
 import type { ChatMessage } from '../types';
@@ -19,13 +19,22 @@ import {
   startToolSession,
   type PatientContext,
 } from '../utils/agentChatService';
-// 新的精简提示词系统
+// 旧提示词系统（保留兼容，逐步迁移）
 import {
   buildAdaptiveSystemPrompt,
-  buildUserMessage,
+  buildUserMessage as buildAdaptiveUserMessage,
   type LLMContext,
   type ConversationPhase,
 } from '../prompts/adaptiveSystemPrompt';
+// 新上下文工程
+import {
+  classifyIntent,
+  shouldExtract,
+  scheduleExtraction,
+  buildDynamicSystemPrompt,
+  buildUserMessage as buildContextUserMessage,
+} from '../../context';
+import { useChildContextStore } from '../../context/ChildContextStore';
 import { countTokens } from '../utils/tokenCounter';
 import { buildLLMMessages, getTruncationStats } from '../utils/contextWindow';
 import { responseCache } from '../utils/responseCache';
@@ -99,6 +108,12 @@ async function consolidateSessionIfNewDay(
 
   if (lastDateStr !== todayDateStr) {
     console.log("[AgentStore] New day detected. Consolidating yesterday's session...");
+    // Phase B: 触发 ChildContext 跨日记忆清理
+    try {
+      useChildContextStore.getState().consolidateIfNewDay();
+    } catch (err) {
+      console.warn('[AgentStore] ChildContext consolidate failed:', err);
+    }
     try {
       const apiMessages = messages.map((m) => ({
         role: (m.role === 'bot' ? 'assistant' : 'user') as 'user' | 'assistant',
@@ -197,10 +212,11 @@ export function createAgentLLMSlice(
         llmProcessing: true,
       }));
 
-      // 使用新的精简提示词系统
-      const llmContext = buildLLMContext(state);
-      const systemPrompt = buildAdaptiveSystemPrompt(llmContext);
-      const userMessage = buildUserMessage(text, llmContext);
+      // Phase B: 新上下文工程 — 意图路由 + 动态注入
+      const childCtx = useChildContextStore.getState().context;
+      const intent = classifyIntent(text);
+      const systemPrompt = buildDynamicSystemPrompt(intent.primary, childCtx);
+      const userMessage = buildContextUserMessage(text, intent.primary);
 
       // Token 感知的消息构建
       const llmMessages = buildLLMMessages(
@@ -212,7 +228,7 @@ export function createAgentLLMSlice(
       // 调试：记录 token 使用情况
       const systemTokens = countTokens(systemPrompt);
       const totalInputTokens = llmMessages.reduce((sum, m) => sum + countTokens(m.content), 0);
-      console.log(`[LLM] System prompt: ${systemTokens} tokens, Total input: ${totalInputTokens} tokens`);
+      console.log(`[LLM] Intent: ${intent.primary}(${Math.round(intent.confidence * 100)}%) | System: ${systemTokens}t | Total: ${totalInputTokens}t`);
 
       const patientContext: PatientContext = {
         name: patientName || '孩子',
@@ -251,6 +267,8 @@ export function createAgentLLMSlice(
 
         resetFailureCount();
 
+        const replyText = response.content;
+
         set((s) => ({
           llmProcessing: false,
           messages: [
@@ -258,12 +276,17 @@ export function createAgentLLMSlice(
             {
               id: nanoid(8),
               role: 'bot',
-              text: response.content,
+              text: replyText,
               timestamp: Date.now(),
               ...(response.toolCall ? { toolCall: response.toolCall } : {}),
             },
           ],
         }));
+
+        // Phase C: 异步要点提取（不阻塞对话）
+        if (shouldExtract(text, replyText)) {
+          scheduleExtraction(text, replyText, childCtx);
+        }
       } catch {
         set({ llmProcessing: false });
         get().advanceStep(text);
@@ -328,10 +351,11 @@ export function createAgentLLMSlice(
         ],
       }));
 
-      // 使用新的精简提示词系统
-      const llmContext = buildLLMContext(state);
-      const systemPrompt = buildAdaptiveSystemPrompt(llmContext);
-      const userMessage = buildUserMessage(text, llmContext);
+      // Phase B: 新上下文工程 — 意图路由 + 动态注入
+      const childCtx = useChildContextStore.getState().context;
+      const intent = classifyIntent(text);
+      const systemPrompt = buildDynamicSystemPrompt(intent.primary, childCtx);
+      const userMessage = buildContextUserMessage(text, intent.primary);
 
       // Token 感知的消息构建
       const llmMessages = buildLLMMessages(
@@ -343,7 +367,7 @@ export function createAgentLLMSlice(
       // 调试：记录 token 使用情况和截断统计
       const systemTokens = countTokens(systemPrompt);
       const stats = getTruncationStats(state.messages, llmMessages.slice(1, -1) as unknown as ChatMessage[]);
-      console.log(`[LLM] System: ${systemTokens} tokens | History: ${stats.originalCount}→${stats.truncatedCount} msgs | Dropped: ${stats.droppedCount}`);
+      console.log(`[LLM] Intent: ${intent.primary}(${Math.round(intent.confidence * 100)}%) | System: ${systemTokens}t | History: ${stats.originalCount}→${stats.truncatedCount} msgs`);
 
       const patientContext: PatientContext = {
         name: patientName || '孩子',
@@ -354,6 +378,9 @@ export function createAgentLLMSlice(
         lastAssessmentSummary: state.lastAssessmentSummary,
       };
 
+      // 捕获回复文本用于提取
+      let streamedReplyText = '';
+
       sendChatMessageStream(
         {
           messages: llmMessages,
@@ -363,6 +390,7 @@ export function createAgentLLMSlice(
         },
         {
           onToken: (token) => {
+            streamedReplyText += token;
             set((s) => ({
               messages: s.messages.map((m) =>
                 m.id === botMsgId ? { ...m, text: m.text + token } : m,
@@ -371,6 +399,7 @@ export function createAgentLLMSlice(
           },
           onDone: (result) => {
             resetFailureCount();
+            const finalText = result.content || streamedReplyText;
             if (result.content) {
               responseCache.set(text, result.content);
             }
@@ -380,12 +409,17 @@ export function createAgentLLMSlice(
                 m.id === botMsgId
                   ? {
                       ...m,
-                      text: result.content || m.text,
+                      text: finalText,
                       ...(result.toolCall ? { toolCall: result.toolCall } : {}),
                     }
                   : m,
               ),
             }));
+
+            // Phase C: 异步要点提取（不阻塞对话）
+            if (shouldExtract(text, finalText)) {
+              scheduleExtraction(text, finalText, childCtx);
+            }
           },
           onError: (error) => {
             console.warn('[AgentStore] Stream error:', error);

@@ -55,7 +55,11 @@ export const LoginPage: React.FC = () => {
       setErrorMsg('');
       setFoundSubject(null);
       try {
-        const response = await fetch(`/api/integration/subject/${code}`);
+        const response = await fetch(`/api/integration/family/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ family_code: code }),
+        });
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('未找到该家庭码对应的档案，请核对后重试');
@@ -79,10 +83,10 @@ export const LoginPage: React.FC = () => {
   const handleLogin = () => {
     if (!foundSubject) return;
 
-    const { subject_id, display_name, sex, age, session_id } = foundSubject;
+    const { patient_id, display_name, sex, age, session_id } = foundSubject;
 
     // Set in Zustand store
-    setPatient(subject_id, display_name);
+    setPatient(patient_id, display_name);
 
     // Map gender correctly
     const genderMapped = sex === 'male' ? '男' : sex === 'female' ? '女' : '';
@@ -99,11 +103,11 @@ export const LoginPage: React.FC = () => {
 
     // Phase 3: 记录家庭码绑定（静默，不影响登录流程）
     const apiBase = import.meta.env.VITE_API_BASE || '';
-    fetch(`${apiBase}/api/integration/subject/link`, {
+    if (import.meta.env.VITE_ENABLE_LEGACY_SUBJECT_LINK === 'true') fetch(`${apiBase}/api/integration/subject/link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subject_id: foundSubject.subject_id,
+        subject_id: patient_id,
         family_code: code,
       }),
     }).catch((err) => {
@@ -178,7 +182,7 @@ export const LoginPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span className="text-base font-bold text-slate-800">{foundSubject.display_name}</span>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200/50">
-                          {foundSubject.subject_id}
+                          {foundSubject.patient_id}
                         </span>
                       </div>
                       <div className="flex gap-2 mt-1.5 text-xs font-medium text-slate-500">
