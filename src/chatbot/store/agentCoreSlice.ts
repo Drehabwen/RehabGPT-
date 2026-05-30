@@ -217,7 +217,7 @@ export function createAgentCoreSlice(
       setTimeout(() => {
         const state = get();
         const welcomeTexts = buildWelcomeMessageCompat(name, state.hasHistory, state.hasDueReminder);
-        const initialMessages = welcomeTexts.map((text) => ({
+        const initialMessages: ChatMessage[] = welcomeTexts.map((text) => ({
           id: nanoid(8),
           role: 'bot' as const,
           text,
@@ -247,7 +247,6 @@ export function createAgentCoreSlice(
         suggestedTools: [],
         toolResults: {},
         riskResult: null,
-        adamsAutoResult: null,
         hasHistory: false,
         lastAssessmentSummary: null,
         llmAvailable: false,
@@ -314,7 +313,6 @@ export function createAgentCoreSlice(
       // Check for branch routing from main menu
       if (currentStep.id === 'main_menu' && answer) {
         const branchMap: Record<string, BranchId> = {
-          reassess: 'reassess',
           report: 'report',
           rehab: 'rehab',
           followup: 'followup',
@@ -365,13 +363,6 @@ export function createAgentCoreSlice(
       }
 
       const nextStep = flow[nextIndex];
-
-      // Camera step
-      if (nextStep.type === 'camera') {
-        set({ stepIndex: nextIndex, isBotTyping: false });
-        setTimeout(() => get().openCamera(), 400);
-        return;
-      }
 
       // Result step
       if (nextStep.type === 'result') {

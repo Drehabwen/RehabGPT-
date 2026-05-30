@@ -1,15 +1,10 @@
 /**
- * 统一系统提示词管理
- * 
- * 之前的问题：
- * - 提示词散落在 questions.ts、branches.ts、useAgentStore.ts 等多个文件
- * - 欢迎消息在 store 中硬编码
- * - 没有统一的语气/角色定义
- * 
+ * 统一系统提示词管理（精简版）
+ *
  * 改进：
- * - 所有提示词集中在此目录
- * - 统一的 AgentPersona 定义
- * - 按功能模块分组（chat、assessment、report、rehab、followup）
+ * - 使用 Token 感知的自适应提示词构建
+ * - 按对话阶段按需加载知识模块
+ * - 系统提示词从 ~8000 tokens 精简到 ~600-1200 tokens
  */
 
 // ── Agent 角色定义（统一语气） ──
@@ -45,7 +40,7 @@ export interface MessageContext {
 export function buildWelcomeMessage(ctx: MessageContext): string[] {
   const { patientName, hasHistory, hasDueReminder } = ctx;
   const childName = patientName.replace(/^患者\s*/, '');
-  
+
   const messages: string[] = [
     `你好！我是 ${AGENT_PERSONA.name} 🧒，${AGENT_PERSONA.role}`,
     `我来帮您关注 ${childName} 的脊柱健康。`,
@@ -62,6 +57,7 @@ export function buildWelcomeMessage(ctx: MessageContext): string[] {
 }
 
 export function buildReassessIntro(_ctx: MessageContext): string[] {
+  void _ctx;
   return [
     '好的，我们来给孩子做一次脊柱健康检查 📋',
     '有些信息之前已经记录过了，不会重复问您。',
@@ -77,6 +73,7 @@ export function buildReportIntro(ctx: MessageContext): string[] {
 }
 
 export function buildRehabIntro(_ctx: MessageContext): string[] {
+  void _ctx;
   return [
     '根据评估结果，我来给孩子一些居家训练建议 🏋️',
     '这些训练可以在家完成，每天坚持效果更好。',
@@ -223,10 +220,13 @@ export function buildAdamsResultMessage(result: string): string[] {
   return map[result] || map.normal;
 }
 
-// ── 导出统一接口 ──
+// ── 导出新的精简提示词系统 ──
 export * from './riskMessages';
-export * from './systemPrompt';
-export * from './persona';
-export * from './clinicalKnowledge';
-export * from './phaseWorkflows';
+export * from './adaptiveSystemPrompt';
+export * from './corePersona';
+export * from './clinicalCore';
 
+// ── 兼容导出（旧接口映射到新实现） ──
+export { buildAdaptiveSystemPrompt as buildSystemPrompt } from './adaptiveSystemPrompt';
+export { buildUserMessage } from './adaptiveSystemPrompt';
+export type { LLMContext, ConversationPhase } from './adaptiveSystemPrompt';

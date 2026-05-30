@@ -22,11 +22,11 @@ export type { AgentState };
 
 export const useAgentStore = create<AgentState>()(
   persist(
-    (...args) => ({
-      ...createAgentCoreSlice(...args),
-      ...createAgentLLMSlice(...args),
-      ...createAgentToolSlice(...args),
-      ...createAgentReportSlice(...args),
+    (set, get) => ({
+      ...createAgentCoreSlice(set, get),
+      ...createAgentLLMSlice(set, get),
+      ...createAgentToolSlice(set, get),
+      ...createAgentReportSlice(set, get),
     }),
     {
       name: 'chatbot-agent-state',
@@ -39,7 +39,6 @@ export const useAgentStore = create<AgentState>()(
         answers: state.answers,
         messages: state.messages,
         riskResult: state.riskResult,
-        adamsAutoResult: state.adamsAutoResult,
         hasHistory: state.hasHistory,
         hasDueReminder: state.hasDueReminder,
         lastAssessmentSummary: state.lastAssessmentSummary,

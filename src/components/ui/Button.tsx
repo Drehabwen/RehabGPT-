@@ -17,6 +17,8 @@ export interface ButtonProps {
   onClick?: () => void;
   className?: string;
   type?: 'button' | 'submit' | 'reset';
+  radius?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  shadow?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -30,12 +32,14 @@ export const Button: React.FC<ButtonProps> = ({
   onClick,
   className = '',
   type = 'button',
+  radius = 'lg',
+  shadow = false,
 }) => {
   const isDisabled = disabled || loading;
 
   const variantClasses = {
     primary:
-      'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] shadow-sm',
+      'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]',
     secondary:
       'bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary-border)] hover:bg-[var(--ink-green-100)]',
     ghost:
@@ -43,7 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
     subtle:
       'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
     danger:
-      'bg-[var(--color-danger)] text-white hover:bg-[var(--status-red-700)] shadow-sm',
+      'bg-[var(--color-danger)] text-white hover:bg-[var(--status-red-700)]',
   };
 
   const sizeClasses = {
@@ -52,6 +56,20 @@ export const Button: React.FC<ButtonProps> = ({
     lg: 'h-12 px-6 text-[var(--text-md)] gap-2',
   };
 
+  const radiusClasses = {
+    sm: 'rounded-[var(--radius-sm)]',
+    md: 'rounded-[var(--radius-md)]',
+    lg: 'rounded-[var(--radius-lg)]',
+    xl: 'rounded-[var(--radius-xl)]',
+    full: 'rounded-[var(--radius-full)]',
+  };
+
+  const shadowClass = shadow
+    ? variant === 'primary' || variant === 'danger'
+      ? 'shadow-md shadow-[var(--color-primary)]/10'
+      : 'shadow-sm'
+    : '';
+
   return (
     <button
       type={type}
@@ -59,13 +77,14 @@ export const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       className={`
         inline-flex items-center justify-center
-        rounded-[var(--radius-lg)]
+        ${radiusClasses[radius]}
         font-[var(--font-medium)]
         transition-all duration-[var(--transition-base)]
         active:scale-[0.97]
         disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
         ${variantClasses[variant]}
         ${sizeClasses[size]}
+        ${shadowClass}
         ${fullWidth ? 'w-full' : ''}
         ${className}
       `}

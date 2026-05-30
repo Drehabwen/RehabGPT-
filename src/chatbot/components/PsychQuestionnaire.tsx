@@ -156,14 +156,14 @@ export const PsychQuestionnaire: React.FC = () => {
           </div>
 
           {/* Detail breakdown */}
-          <div className="rounded-3xl border border-slate-100 bg-white/90 p-4.5 shadow-sm">
+          <div className="rounded-3xl border border-slate-100 bg-white/90 p-4 shadow-sm">
             <h3 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1">
               📋 细项指标得分明细
             </h3>
             <div className="space-y-2.5">
               {PHQ4_QUESTIONS.map((q) => (
                 <div key={q.id} className="flex items-center justify-between text-xs">
-                  <span className="text-slate-650 font-medium truncate mr-2">{q.text}</span>
+                  <span className="text-slate-600 font-medium truncate mr-2">{q.text}</span>
                   <span className="flex-shrink-0 tabular-nums font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
                     {scores[q.id]} 分
                   </span>
@@ -173,11 +173,11 @@ export const PsychQuestionnaire: React.FC = () => {
           </div>
 
           {/* Interpretation */}
-          <div className="rounded-3xl border border-slate-100 bg-white/90 p-4.5 shadow-sm">
-            <h3 className="text-xs font-bold text-slate-750 mb-2 flex items-center gap-1">
+          <div className="rounded-3xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1">
               ✨ 评估报告深度解读
             </h3>
-            <p className="text-xs text-slate-650 leading-relaxed font-semibold">{result.summary}</p>
+            <p className="text-xs text-slate-600 leading-relaxed font-semibold">{result.summary}</p>
             <div className="mt-3.5 rounded-2xl bg-amber-50/50 border border-amber-100/60 p-3.5 flex gap-2">
               <AlertTriangle size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">{result.suggestion}</p>
@@ -204,7 +204,7 @@ export const PsychQuestionnaire: React.FC = () => {
     <div className="flex flex-col h-full bg-slate-50/30">
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {/* Header */}
-        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-4.5 shadow-sm backdrop-blur-sm">
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center gap-1.5 mb-2">
             <Heart size={16} className="text-emerald-500 fill-emerald-400" />
             <h3 className="text-xs font-extrabold text-emerald-800 flex items-center gap-1">
@@ -220,10 +220,10 @@ export const PsychQuestionnaire: React.FC = () => {
         {PHQ4_QUESTIONS.map((q, qi) => (
           <div
             key={q.id}
-            className="rounded-3xl border border-slate-200/60 bg-white p-4.5 shadow-sm"
+            className="rounded-3xl border border-slate-200/60 bg-white p-4 shadow-sm"
           >
             <div className="flex items-start gap-2.5 mb-3.5">
-              <span className="flex-shrink-0 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-extrabold">
+              <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-extrabold">
                 {qi + 1}
               </span>
               <div>

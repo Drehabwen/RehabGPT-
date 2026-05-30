@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   ClipboardList, 
   ChevronRight, 
@@ -238,6 +238,13 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
   const currentQuestion = template.questions[currentStep];
   const progressPercent = Math.round(((currentStep + 1) / questionsCount) * 100);
 
+  // Track mounted state to avoid state updates after unmount (e.g. setTimeouts)
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Friendly meta descriptions for the chatbot patient/parent journey
   const scaleFriendlyMeta = {
     'SRS-22': {
@@ -264,7 +271,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
       duration: '30 秒',
       accentColor: 'from-rose-500/10 to-red-500/10 border-red-100',
       badgeBg: 'bg-red-50 border-red-100 text-red-700',
-      themeGradient: 'from-rose-500 to-red-650 shadow-rose-500/20',
+      themeGradient: 'from-rose-500 to-red-600 shadow-rose-500/20',
       iconColor: 'text-rose-600',
       dimensions: ['即时主观疼痛'],
       welcomeTitle: '主观疼痛视觉度快速标定',
@@ -290,12 +297,12 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
     // Auto advance after slight delay for tactile responsiveness
     if (currentStep < questionsCount - 1) {
       setTimeout(() => {
-        setCurrentStep(prev => prev + 1);
+        if (mountedRef.current) setCurrentStep(prev => prev + 1);
       }, 200);
     } else {
       // Advance to confirm review mode when the last question is selected
       setTimeout(() => {
-        setMode('confirm');
+        if (mountedRef.current) setMode('confirm');
       }, 300);
     }
   }, [currentStep, currentQuestion.id, questionsCount]);
@@ -454,7 +461,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
           </div>
         </div>
 
-        <p className="text-[10px] text-slate-400 mt-4 flex items-center justify-center gap-1 bg-white/40 py-1.5 rounded-lg border border-slate-150/40">
+        <p className="text-[10px] text-slate-400 mt-4 flex items-center justify-center gap-1 bg-white/40 py-1.5 rounded-lg border border-slate-200/40">
           <Sparkles size={10} className="text-amber-500 animate-spin" />
           系统已录入诊疗 SOAP 的 S 主观评定集。
         </p>
@@ -639,7 +646,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
           <button
             type="button"
             onClick={handleReset}
-            className="w-full py-2.5 rounded-2xl text-[10px] font-bold text-slate-400 hover:text-slate-650 bg-white hover:bg-slate-50 border border-slate-200 transition-colors"
+            className="w-full py-2.5 rounded-2xl text-[10px] font-bold text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 transition-colors"
           >
             重新填写评估问卷
           </button>
@@ -683,7 +690,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
           <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg leading-none shrink-0 border border-emerald-100/50">
             Q{currentStep + 1}
           </span>
-          <p className="text-xs font-black text-slate-750 leading-normal">
+          <p className="text-xs font-black text-slate-700 leading-normal">
             {currentQuestion.text}
           </p>
         </div>
@@ -701,7 +708,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
               className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-semibold flex justify-between items-center transition-all duration-200 border ${
                 selected 
                   ? 'border-emerald-400 bg-emerald-500/10 text-emerald-800 shadow-sm font-bold'
-                  : 'border-slate-100 bg-slate-50/70 text-slate-650 hover:bg-slate-100 hover:border-slate-200 active:scale-[0.99]'
+                  : 'border-slate-100 bg-slate-50/70 text-slate-600 hover:bg-slate-100 hover:border-slate-200 active:scale-[0.99]'
               }`}
             >
               <span>{opt.text}</span>
@@ -719,7 +726,7 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
       <div className="flex justify-between items-center pt-2.5 border-t border-slate-100">
         <button
           onClick={handlePrev}
-          className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-650 hover:bg-slate-50 hover:border-slate-350 transition-colors active:scale-[0.97]"
+          className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition-colors active:scale-[0.97]"
           title="上一题"
         >
           <ChevronLeft size={16} />

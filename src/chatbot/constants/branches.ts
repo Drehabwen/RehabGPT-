@@ -14,12 +14,11 @@ import type { FlowStep, ChoiceOption } from '../types';
 import { QUESTIONS, OPTIONS } from './questions';
 
 // ── 分支 ID ──
-export type BranchId = 'main' | 'reassess' | 'report' | 'rehab' | 'followup';
+export type BranchId = 'main' | 'report' | 'rehab' | 'followup';
 
 // ── 主菜单选项（家长友好文案） ──
 export const MAIN_MENU_OPTIONS: ChoiceOption[] = [
-  { label: '🩺 给孩子做检查', value: 'reassess' },
-  { label: '📊 查看检查结果', value: 'report' },
+  { label: '📊 查看评估结果', value: 'report' },
   { label: '🏋️ 居家训练建议', value: 'rehab' },
   { label: '📅 复查提醒', value: 'followup' },
 ];
@@ -71,133 +70,6 @@ export const MAIN_FLOW: FlowStep[] = [
     options: [{ label: '开始', value: 'start' }],
   },
   MAIN_MENU_STEP,
-];
-
-// ===================================================================
-// Branch: reassess — 给孩子做检查（约 12 步）
-// ===================================================================
-export const REASSESS_FLOW: FlowStep[] = [
-  // Step R1: 上下文确认
-  {
-    id: 'reassess_context',
-    type: 'bot_message',
-    botMessages: [
-      '好的，我们来给孩子做一次脊柱健康检查 📋',
-      '有些信息之前已经记录过了，不会重复问您。',
-      '准备好了吗？',
-    ],
-    options: [{ label: '开始检查', value: 'start' }],
-  },
-
-  // Step R2: 生长速度
-  {
-    id: 'growth_spurt',
-    type: 'user_choice',
-    botMessages: QUESTIONS.growth_spurt,
-    questionKey: 'growth_spurt',
-    options: OPTIONS.growth_spurt,
-  },
-
-  // Step R3: 家族史
-  {
-    id: 'family_scoliosis',
-    type: 'user_choice',
-    botMessages: QUESTIONS.family_scoliosis,
-    questionKey: 'family_scoliosis',
-    options: OPTIONS.family_scoliosis,
-  },
-
-  // Step R4: 背痛频率（家长视角）
-  {
-    id: 'back_pain',
-    type: 'user_choice',
-    botMessages: [
-      '最近几个月，孩子有没有说过背部疼或者酸？',
-      '（有些孩子不太会主动说，可以回忆一下孩子有没有频繁揉背、不愿意背书包等情况）',
-    ],
-    questionKey: 'back_pain',
-    options: OPTIONS.back_pain,
-  },
-
-  // Step R5: 疼痛程度（条件：有疼痛）
-  {
-    id: 'pain_level',
-    type: 'user_slider',
-    botMessages: QUESTIONS.pain_level,
-    questionKey: 'pain_level',
-    sliderMin: 0,
-    sliderMax: 10,
-    sliderStep: 1,
-    sliderLabels: [
-      { value: 0, label: '不疼' },
-      { value: 5, label: '中等' },
-      { value: 10, label: '很疼' },
-    ],
-    skipCondition: (answers) => answers.back_pain === '从不疼',
-  },
-
-  // Step R6: 肩膀对称
-  {
-    id: 'posture_shoulders',
-    type: 'user_choice',
-    botMessages: QUESTIONS.posture_shoulders,
-    questionKey: 'posture_shoulders',
-    options: OPTIONS.posture,
-  },
-
-  // Step R7: 肩胛对称
-  {
-    id: 'posture_scapula',
-    type: 'user_choice',
-    botMessages: QUESTIONS.posture_scapula,
-    questionKey: 'posture_scapula',
-    options: OPTIONS.posture_scapula,
-  },
-
-  // Step R8: 腰部对称
-  {
-    id: 'posture_waist',
-    type: 'user_choice',
-    botMessages: QUESTIONS.posture_waist,
-    questionKey: 'posture_waist',
-    options: OPTIONS.posture_waist,
-  },
-
-  // Step R9: Adam's 测试介绍
-  {
-    id: 'adams_intro',
-    type: 'bot_message',
-    botMessages: QUESTIONS.adams_intro,
-    options: OPTIONS.adams_ready,
-  },
-
-  // Step R10: Adam's 测试方式
-  {
-    id: 'adams_method',
-    type: 'user_choice',
-    botMessages: QUESTIONS.adams_method,
-    questionKey: 'adams_method',
-    options: OPTIONS.adams_method,
-  },
-
-  // Step R11: 摄像头（条件：选择摄像头）
-  {
-    id: 'adams_camera',
-    type: 'camera',
-    botMessages: QUESTIONS.adams_camera,
-    skipCondition: (answers) => answers.adams_method !== '用摄像头拍',
-  },
-
-  // Step R12: 结果展示
-  {
-    id: 'results',
-    type: 'result',
-    botMessages: [
-      '检查完成了！',
-      '下面是孩子的评估结果：',
-    ],
-    options: OPTIONS.result_ack,
-  },
 ];
 
 // ===================================================================
@@ -309,7 +181,6 @@ export const FOLLOWUP_FLOW: FlowStep[] = [
 // ===================================================================
 export const BRANCH_FLOWS: Record<BranchId, FlowStep[]> = {
   main: MAIN_FLOW,
-  reassess: REASSESS_FLOW,
   report: REPORT_FLOW,
   rehab: REHAB_FLOW,
   followup: FOLLOWUP_FLOW,

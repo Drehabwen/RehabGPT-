@@ -5,14 +5,14 @@
  * Proxies chat requests to DeepSeek API (or any OpenAI-compatible LLM).
  *
  * Start:  npx tsx server/index.ts
- * Port:   8002 (matches Vite proxy config in vite.config.ts)
+ * Port:   8001 (matches Vite proxy config in vite.config.ts)
  */
 
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { chatCompletion, streamChatCompletion, isConfigured, type LLMMessage } from './llmClient';
 
-const PORT = parseInt(process.env.PORT || '8002', 10);
+const PORT = parseInt(process.env.PORT || '8001', 10);
 
 // ── Types (mirrors frontend agentChatService.ts) ──
 

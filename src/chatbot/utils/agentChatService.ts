@@ -15,7 +15,7 @@ const HEALTH_TIMEOUT = 5000; // 5 秒
 // ── 请求/响应类型 ──
 
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'tool';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
 }
 

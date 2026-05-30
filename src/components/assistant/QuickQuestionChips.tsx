@@ -7,6 +7,7 @@
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
 import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
 
 export interface QuickQuestionChipsProps {
   onQuestionClick: (question: string) => void;
@@ -26,20 +27,22 @@ export const QuickQuestionChips: React.FC<QuickQuestionChipsProps> = ({
   questions = DEFAULT_QUESTIONS,
 }) => {
   return (
-    <Card variant="subtle" padding="sm" className="bg-[var(--bg-subtle)]">
+    <Card variant="subtle" padding="sm">
       <div className="flex items-center gap-2 mb-2 px-1">
         <HelpCircle className="w-3.5 h-3.5 text-[var(--text-muted)]" />
         <span className="text-[var(--text-xs)] font-[var(--font-medium)] text-[var(--text-muted)]">家长常问</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {questions.map((q, i) => (
-          <button
+          <Button
             key={i}
+            variant="subtle"
+            size="sm"
+            radius="md"
             onClick={() => onQuestionClick(q)}
-            className="text-[var(--text-xs)] px-3 py-1.5 rounded-lg bg-white border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--ink-green-300)] hover:text-[var(--ink-green-700)] hover:bg-[var(--ink-green-50)] transition-all duration-200"
           >
             {q}
-          </button>
+          </Button>
         ))}
       </div>
     </Card>

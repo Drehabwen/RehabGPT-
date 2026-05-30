@@ -1,7 +1,7 @@
 /**
  * 全局样式
  *
- * 基于 Design Tokens 的全局样式定义
+ * 基于 Design Tokens 的全局样式定义，注入奢华、灵动的极光与弥散背景
  */
 
 @import './tokens.css';
@@ -20,6 +20,7 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
+    height: 100%;
   }
 
   body {
@@ -30,9 +31,27 @@
     background-color: var(--bg-page);
     min-height: 100vh;
     overflow-x: hidden;
+    position: relative;
   }
 
-  /* 滚动条样式 */
+  /* 网页背景：超高级的动态弥散光晕效果 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -2;
+    background: radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.4) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(199, 210, 254, 0.3) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(254, 243, 199, 0.3) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(204, 251, 241, 0.4) 0px, transparent 50%);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  /* 极致细腻、透明圆润的滚动条样式 */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -43,37 +62,36 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
+    background: rgba(15, 23, 42, 0.1);
     border-radius: var(--radius-full);
+    transition: background var(--transition-fast);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+    background: rgba(15, 23, 42, 0.2);
   }
 
   /* 选中文字样式 */
   ::selection {
-    background: var(--ink-green-200);
-    color: var(--ink-green-900);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-primary);
   }
 
-  /* 图片默认样式 */
   img {
     max-width: 100%;
     height: auto;
     display: block;
   }
 
-  /* 按钮默认样式重置 */
   button {
     font-family: inherit;
     cursor: pointer;
     border: none;
     background: none;
     outline: none;
+    user-select: none;
   }
 
-  /* 输入框默认样式重置 */
   input,
   textarea,
   select {
@@ -82,13 +100,11 @@
     outline: none;
   }
 
-  /* 链接默认样式 */
   a {
     color: inherit;
     text-decoration: none;
   }
 
-  /* 列表默认样式 */
   ul,
   ol {
     list-style: none;
@@ -120,34 +136,37 @@
     display: none;
   }
 
-  /* 毛玻璃效果 */
-  .glass {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+  /* 极致毛玻璃面板 */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05) !important;
   }
 
-  /* 渐变文字 */
+  /* 渐变流光文字 */
   .text-gradient-brand {
-    background: linear-gradient(135deg, var(--ink-green-700), var(--teal-600));
+    background: linear-gradient(135deg, var(--ink-green-800) 0%, var(--teal-600) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* 卡片悬浮效果 */
+  /* 精致卡片悬浮手感 */
   .card-hover {
-    transition: transform var(--transition-base), box-shadow var(--transition-base);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
   }
 
   .card-hover:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px) scale(1.005);
     box-shadow: var(--shadow-elevated);
+    border-color: rgba(16, 185, 129, 0.25) !important;
   }
 
   /* 页面容器 */
   .page-container {
-    max-width: 1200px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: var(--space-4);
   }
@@ -157,11 +176,12 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
-  /* 动画 */
+  /* ── 动画定义与类 ── */
+
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
@@ -172,7 +192,7 @@
   @keyframes slideInRight {
     from {
       opacity: 0;
-      transform: translateX(20px);
+      transform: translateX(24px);
     }
     to {
       opacity: 1;
@@ -180,12 +200,23 @@
     }
   }
 
-  @keyframes pulse-soft {
+  @keyframes float {
     0%, 100% {
-      opacity: 1;
+      transform: translateY(0);
     }
     50% {
-      opacity: 0.6;
+      transform: translateY(-6px);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.2);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.1);
     }
   }
 
@@ -196,15 +227,19 @@
   }
 
   .animate-fade-in {
-    animation: fadeIn var(--transition-slow) ease-out;
+    animation: fadeIn var(--transition-slow) cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .animate-slide-in-right {
-    animation: slideInRight var(--transition-slow) ease-out;
+    animation: slideInRight var(--transition-slow) cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
-  .animate-pulse-soft {
-    animation: pulse-soft 2s ease-in-out infinite;
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
 
   .animate-spin {

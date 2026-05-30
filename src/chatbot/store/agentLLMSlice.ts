@@ -35,7 +35,6 @@ import { BRANCH_FLOWS } from '../constants/branches';
 function inferConversationPhase(state: AgentState): ConversationPhase {
   const { branch, view, riskResult, activeTool } = state;
 
-  if (view === 'adams_camera' || activeTool === 'adams_camera') return 'adams_test';
   if (view === 'result' && riskResult) return 'result_review';
 
   switch (branch) {
@@ -141,7 +140,7 @@ async function consolidateSessionIfNewDay(
 
 // ── Slice 类型 ──
 export interface AgentLLMSlice {
-  checkLLMStatus: () => Promise<void>;
+  checkLLMStatus: () => Promise<boolean>;
   resetLLMStatus: () => void;
   sendFreeText: (text: string) => Promise<void>;
   sendFreeTextStream: (text: string) => Promise<void>;
@@ -157,6 +156,7 @@ export function createAgentLLMSlice(
     checkLLMStatus: async () => {
       const available = await checkLLMAvailable();
       set({ llmAvailable: available });
+      return available;
     },
 
     resetLLMStatus: () => {
@@ -408,23 +408,11 @@ export function createAgentLLMSlice(
 
     // ── 执行 LLM 请求的工具调用 ──
     executeToolFromLLM: (toolId, _reason) => {
+      void _reason;
       const cleanId = toolId.replace(/^invoke_/, '');
 
       if (['vision3', 'rom', 'scales', 'comparison'].includes(cleanId)) {
         get().invokeTool(cleanId as AgentToolId);
-      } else if (cleanId === 'adams_camera') {
-        const { patientName, patientAge, toolResults } = get();
-        const backendToolId = 'invoke_adams_camera';
-        if (patientName && !toolResults._sessionId) {
-          startToolSession(backendToolId, patientName, patientAge).then((session) => {
-            if (session) {
-              set((s) => ({
-                toolResults: { ...s.toolResults, _sessionId: session.sessionId, _toolId: backendToolId },
-              }));
-            }
-          });
-        }
-        get().openCamera();
       } else if (cleanId === 'psych') {
         get().invokeTool('psych');
       } else {

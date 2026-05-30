@@ -246,7 +246,10 @@ export async function runScaleIntegrationTest(): Promise<boolean> {
 
 if (typeof window === 'undefined') {
   // Node.js 环境
-  runScaleIntegrationTest().then((passed) => {
-    process.exit(passed ? 0 : 1);
-  });
+  const p = (globalThis as any).process;
+  if (p && typeof p.exit === 'function') {
+    runScaleIntegrationTest().then((passed) => {
+      p.exit(passed ? 0 : 1);
+    });
+  }
 }

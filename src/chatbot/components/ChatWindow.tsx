@@ -14,8 +14,11 @@ import { BRANCH_FLOWS } from '../constants/branches';
  * LLM 不可用时：规则引擎，ChatInput 降级为规则引擎入口
  *
  * 布局：消息列表（滚动）+ 常驻底部输入栏
+ * headerContent 在消息列表顶部渲染，可与消息一起滚动。
  */
-export const ChatWindow: React.FC = () => {
+export const ChatWindow: React.FC<{ headerContent?: React.ReactNode }> = ({
+  headerContent,
+}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -27,8 +30,8 @@ export const ChatWindow: React.FC = () => {
   const answers = useAgentStore((s) => s.answers);
   const llmAvailable = useAgentStore((s) => s.llmAvailable);
   const advanceStep = useAgentStore((s) => s.advanceStep);
-  
-  const [typingStartTime, setTypingStartTime] = useState<number>(Date.now());
+
+  const [typingStartTime, setTypingStartTime] = useState<number>(0);
 
   // 当开始打字时记录时间
   useEffect(() => {
@@ -139,6 +142,21 @@ export const ChatWindow: React.FC = () => {
         className="flex-1 overflow-y-auto min-h-0 py-4 px-4 custom-scrollbar"
         style={{ overflowAnchor: 'auto' }}
       >
+        {/* 对话流顶部卡片（欢迎语 / 筛查步骤 / 状态卡片） */}
+        {headerContent}
+
+        {messages.length === 0 && !isBotTyping && !llmProcessing && !headerContent && (
+          <div className="flex flex-col items-center justify-center py-20 text-[var(--text-muted)] gap-3">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+              <span className="text-2xl">🦕</span>
+            </div>
+            <p className="text-sm font-bold text-[var(--text-secondary)]">嗨！我是小柱</p>
+            <p className="text-xs text-[var(--text-muted)] text-center leading-relaxed">
+              我是你的专属脊柱健康助手，有任何问题都可以问我
+            </p>
+          </div>
+        )}
+
         {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}

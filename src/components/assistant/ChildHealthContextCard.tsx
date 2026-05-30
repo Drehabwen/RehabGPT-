@@ -39,10 +39,10 @@ export const ChildHealthContextCard: React.FC<ChildHealthContextCardProps> = ({
   const config = STATUS_CONFIG[status];
 
   return (
-    <Card variant="elevated" padding="md">
+    <Card variant="elevated" padding="md" radius="2xl">
       <div className="flex items-start gap-4">
         {/* 头像 */}
-        <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--ink-green-100)] to-[var(--teal-100)] flex items-center justify-center border-2 border-[var(--ink-green-200)]">
+        <div className="flex-shrink-0 w-12 h-12 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--ink-green-100)] to-[var(--teal-100)] flex items-center justify-center border-2 border-[var(--color-primary-border)]">
           <User className="w-6 h-6 text-[var(--color-primary)]" />
         </div>
 
@@ -72,7 +72,7 @@ export const ChildHealthContextCard: React.FC<ChildHealthContextCardProps> = ({
               {concerns.map((c, i) => (
                 <span
                   key={i}
-                  className="text-[var(--text-xs)] px-2 py-0.5 rounded-full bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-light)]"
+                  className="text-[var(--text-xs)] px-2 py-0.5 rounded-[var(--radius-full)] bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-light)]"
                 >
                   {c}
                 </span>
@@ -85,10 +85,10 @@ export const ChildHealthContextCard: React.FC<ChildHealthContextCardProps> = ({
       {/* 下一步 */}
       <button
         onClick={onNextStep}
-        className="mt-3 w-full flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-[var(--color-primary-light)] to-[var(--teal-50)] border border-[var(--color-primary-border)] hover:shadow-sm transition-all"
+        className="mt-3 w-full flex items-center justify-between px-4 py-3 rounded-[var(--radius-xl)] bg-gradient-to-r from-[var(--color-primary-light)] to-[var(--teal-50)] border border-[var(--color-primary-border)] hover:shadow-[var(--shadow-sm)] transition-all cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-[var(--color-primary)] text-white flex items-center justify-center text-xs font-bold">
+          <div className="w-6 h-6 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white flex items-center justify-center text-xs font-bold">
             1
           </div>
           <span className="text-[var(--text-sm)] font-[var(--font-medium)] text-[var(--color-primary)]">

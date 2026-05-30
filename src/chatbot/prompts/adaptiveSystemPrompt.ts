@@ -190,3 +190,5 @@ export function buildUserMessage(text: string, ctx: LLMContext): string {
 
   return parts.join('');
 }
+
+export { buildAdaptiveSystemPrompt as buildSystemPrompt };

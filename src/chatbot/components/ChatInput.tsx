@@ -67,31 +67,31 @@ export const ChatInput: React.FC = () => {
   };
 
   return (
-    <div className="flex-shrink-0 px-4 py-3 border-t border-slate-100 bg-white/90 backdrop-blur-md">
+    <div className="flex-shrink-0 px-4 py-3 border-t border-[var(--border-light)] bg-[var(--surface)]/90 backdrop-blur-md">
       {/* 状态指示条 */}
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-1.5">
           {llmAvailable ? (
             <>
-              <Wifi size={12} className="text-emerald-500" />
-              <span className="text-[10px] text-emerald-600 font-medium">智能助手已连接</span>
+              <Wifi size={12} className="text-[var(--color-success)]" />
+              <span className="text-[10px] text-[var(--color-success)] font-medium">智能助手已连接</span>
             </>
           ) : (
             <>
-              <WifiOff size={12} className="text-amber-500" />
-              <span className="text-[10px] text-amber-600 font-medium">离线模式</span>
+              <WifiOff size={12} className="text-[var(--color-warning)]" />
+              <span className="text-[10px] text-[var(--color-warning)] font-medium">离线模式</span>
               <button
                 onClick={() => checkLLMStatus()}
-                className="ml-1 p-0.5 rounded hover:bg-amber-100 transition-colors"
+                className="ml-1 p-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
                 title="重新连接"
               >
-                <RefreshCw size={10} className="text-amber-600" />
+                <RefreshCw size={10} className="text-[var(--color-warning)]" />
               </button>
             </>
           )}
         </div>
         {llmProcessing && (
-          <span className="text-[10px] text-slate-400">预计等待 3-6 秒</span>
+          <span className="text-[10px] text-[var(--text-muted)]">预计等待 3-6 秒</span>
         )}
       </div>
 
@@ -104,13 +104,13 @@ export const ChatInput: React.FC = () => {
           onKeyDown={handleKeyDown}
           placeholder={getPlaceholder()}
           disabled={disabled}
-          className="flex-1 h-11 rounded-full border border-slate-200/85 bg-slate-50/50 px-5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 font-medium"
+          className="flex-1 h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 transition-[border-color,box-shadow,opacity] duration-200 disabled:opacity-50 font-medium"
         />
         <button
           type="button"
           onClick={handleSubmit}
           disabled={disabled || !value.trim()}
-          className="flex-shrink-0 h-11 w-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center transition-[opacity,transform,box-shadow] duration-200 hover:opacity-95 hover:shadow-md hover:shadow-emerald-500/15 active:scale-[0.94] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          className="flex-shrink-0 h-11 w-11 rounded-full bg-gradient-to-tr from-[var(--brand-600)] to-[var(--brand-800)] text-[var(--text-inverse)] flex items-center justify-center transition-[opacity,transform,box-shadow] duration-200 hover:opacity-95 hover:shadow-md hover:shadow-[var(--shadow-xs)] active:scale-[0.94] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           {llmProcessing ? (
             <Loader2 size={16} className="animate-spin" />

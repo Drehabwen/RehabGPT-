@@ -32,8 +32,17 @@ export const useChatbotStore = create<ChatbotState>()(
 
       // ── 设置患者 ──
       setPatient: (id, name) => {
-        set({ patientId: id, patientName: name });
-        // Bridge: sync patient identity to agent store
+        // 先重置对话引擎核心状态（将 view 重置回 'chat'、清空旧消息与状态锁），规避摄像头残留与账号越界 Bug
+        useAgentStore.getState().resetAgent();
+
+        set({
+          patientId: id,
+          patientName: name,
+          answers: {},
+          riskResult: null,
+        });
+
+        // 启动全新的对话生命周期初始化
         useAgentStore.getState().initWithPatient(id, name);
       },
 

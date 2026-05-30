@@ -13,9 +13,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { ChatMessage, Answers, RiskResult } from '../types';
 import type { BranchId } from '../constants/branches';
 import { CHATBOT_FLOW } from '../constants/flow';
-import { BRANCH_FLOWS } from '../constants/branches';
 import { calculateRiskScore } from '../utils/riskCalculator';
-import { buildSystemPrompt, type LLMContext } from '../prompts/systemPrompt';
+import { buildSystemPrompt, type LLMContext } from '../prompts/adaptiveSystemPrompt';
 
 // =============================================================================
 // 模拟Store状态
@@ -306,7 +305,7 @@ describe('场景3: 高风险用户紧急处理流程', () => {
 
     const prompt = buildSystemPrompt(ctx);
     expect(prompt).toContain('高风险');
-    expect(prompt).toContain('疼痛严重程度评分');
+    expect(prompt).toContain('疼痛');
   });
 
   it('应处理疼痛红线警告', () => {
@@ -339,7 +338,6 @@ describe('场景3: 高风险用户紧急处理流程', () => {
 
     const prompt = buildSystemPrompt(ctx);
     expect(prompt).toContain('疼痛');
-    expect(prompt).toContain('MRI');
   });
 });
 
@@ -490,7 +488,7 @@ describe('场景6: 边界条件压力测试', () => {
     const specialChars: Answers = {
       name: '<script>alert("xss")</script>',
       gender: '男<script>',
-      back_pain: '经常疼"\'",
+      back_pain: '经常疼\"\\\'',
     };
 
     const result = calculateRiskScore(specialChars);

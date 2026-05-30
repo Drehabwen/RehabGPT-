@@ -1,33 +1,44 @@
 @import "tailwindcss";
+@import './styles/globals.css';
 
-:root {
-  --brand: #3b7e65; /* premium sage-green */
-  --brand-strong: #2c634e; /* dark sage-green */
-  --brand-soft: #ebf4f0; /* soft mint-green */
-  --surface: #f8fafc;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border: #e2e8f0;
-  --radius: 1.5rem;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/*
+ * globals.css 已提供：
+ *   - CSS reset (*, *::before, *::after { box-sizing; margin; padding })
+ *   - body { font-family, font-size, color, background-color }
+ *   - 弥散光晕背景 (body::before)
+ *
+ * 这里只补全 globals.css 未覆盖的根元素设置。
+ */
 
 html, body, #root {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: var(--surface);
-  color: var(--text-primary);
 }
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+/* Premium parent card style */
+.parent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-xl);
+  border-radius: var(--radius-3xl);
+}
 
 /* Chat bubble styles */
 .chat-bubble-bot {
-  @apply bg-white border border-slate-200/80 text-slate-700 shadow-sm backdrop-blur-md rounded-2xl rounded-tl-sm;
+  background: var(--surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-xl);
+  border-top-left-radius: var(--radius-none);
 }
 .chat-bubble-user {
-  @apply bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-100/30 rounded-2xl rounded-tr-sm;
+  background: linear-gradient(to right, var(--brand-700), var(--brand-800));
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-none);
 }

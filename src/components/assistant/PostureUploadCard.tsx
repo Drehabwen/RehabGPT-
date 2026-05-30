@@ -40,9 +40,9 @@ export const PostureUploadCard: React.FC<PostureUploadCardProps> = ({ onUpload, 
   );
 
   return (
-    <Card variant="default" padding="lg" className="bg-gradient-to-br from-[var(--ink-green-50)] to-[var(--teal-50)]">
+    <Card variant="default" padding="lg" radius="3xl" className="bg-gradient-to-br from-[var(--ink-green-50)] to-[var(--teal-50)]">
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--ink-green-500)] to-[var(--teal-500)] flex items-center justify-center shadow-lg shadow-[var(--ink-green-200)]">
+        <div className="flex-shrink-0 w-14 h-14 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--ink-green-500)] to-[var(--teal-500)] flex items-center justify-center shadow-[var(--shadow-sm)]">
           <Camera className="w-7 h-7 text-white" />
         </div>
         <div className="flex-1">
@@ -54,7 +54,7 @@ export const PostureUploadCard: React.FC<PostureUploadCardProps> = ({ onUpload, 
             {REQUIREMENTS.map((req, i) => {
               const Icon = req.icon;
               return (
-                <span key={i} className="inline-flex items-center gap-1 text-[var(--text-xs)] text-[var(--text-muted)] bg-white/80 px-2 py-1 rounded-lg border border-[var(--border-light)]">
+                <span key={i} className="inline-flex items-center gap-1 text-[var(--text-xs)] text-[var(--text-muted)] bg-white/80 px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border-light)]">
                   <Icon className="w-3 h-3" />
                   {req.text}
                 </span>
@@ -68,18 +68,18 @@ export const PostureUploadCard: React.FC<PostureUploadCardProps> = ({ onUpload, 
       <div
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        className="mt-4 border-2 border-dashed border-[var(--ink-green-200)] rounded-xl p-6 text-center hover:border-[var(--ink-green-400)] hover:bg-[var(--ink-green-50)] transition-colors cursor-pointer"
+        className="mt-4 border-2 border-dashed border-[var(--color-primary-border)] rounded-[var(--radius-xl)] p-6 text-center hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/40 transition-colors cursor-pointer"
         onClick={onClick}
       >
         <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" id="posture-upload" />
         <label htmlFor="posture-upload" className="cursor-pointer block">
-          <Upload className="w-8 h-8 text-[var(--ink-green-400)] mx-auto mb-2" />
-          <p className="text-[var(--text-sm)] font-[var(--font-medium)] text-[var(--ink-green-700)]">点击或拖拽照片至此处</p>
+          <Upload className="w-8 h-8 text-[var(--color-primary)] mx-auto mb-2" />
+          <p className="text-[var(--text-sm)] font-[var(--font-medium)] text-[var(--color-primary)]">点击或拖拽照片至此处</p>
           <p className="text-[var(--text-xs)] text-[var(--text-muted)] mt-1">支持 JPG、PNG 格式</p>
         </label>
       </div>
 
-      <Button variant="primary" size="lg" fullWidth icon={<Camera className="w-5 h-5" />} className="mt-4" onClick={onClick}>
+      <Button variant="primary" size="lg" radius="full" shadow fullWidth icon={<Camera className="w-5 h-5" />} className="mt-4" onClick={onClick}>
         上传照片开始初筛
       </Button>
     </Card>

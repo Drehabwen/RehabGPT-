@@ -32,7 +32,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     >
       {/* Bot 头像 — 恐龙小柱 mascot */}
       {isBot && (
-        <div className="flex-shrink-0 w-9 h-9 rounded-2xl bg-emerald-50/80 flex items-center justify-center text-lg border border-emerald-100 shadow-sm">
+        <div className="flex-shrink-0 w-9 h-9 rounded-2xl bg-[var(--color-primary-light)] flex items-center justify-center text-lg border border-[var(--color-primary-border)] shadow-sm">
           🦕
         </div>
       )}
@@ -60,7 +60,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
         {/* 康复评估量表卡片 */}
         {isBot && message.scalePayload && (
-          <div className="mt-3.5 w-full min-w-[280px] xs:min-w-[320px] md:min-w-[360px]">
+          <div className="mt-3.5 w-full min-w-[280px] min-w-[280px] sm:min-w-[320px] md:min-w-[360px]">
             <ScaleInteractionCard
               taskId={message.scalePayload.taskId}
               sessionId={message.scalePayload.sessionId}
@@ -84,7 +84,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
       {/* User 头像 */}
       {!isBot && (
-        <div className="flex-shrink-0 w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center text-xs font-extrabold shadow-md shadow-emerald-100/30">
+        <div className="flex-shrink-0 w-9 h-9 rounded-2xl bg-gradient-to-tr from-[var(--brand-600)] to-[var(--brand-800)] text-[var(--text-inverse)] flex items-center justify-center text-xs font-extrabold shadow-md shadow-[var(--shadow-xs)]">
           家
         </div>
       )}

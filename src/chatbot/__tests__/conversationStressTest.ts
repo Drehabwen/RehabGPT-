@@ -12,9 +12,9 @@
 
 import { describe, it, expect, bench } from 'vitest';
 import { CHATBOT_FLOW } from '../constants/flow';
-import { BRANCH_FLOWS, MAIN_MENU_STEP, type BranchId } from '../constants/branches';
+import { BRANCH_FLOWS, type BranchId } from '../constants/branches';
 import { calculateRiskScore } from '../utils/riskCalculator';
-import { buildSystemPrompt, buildUserMessage, type LLMContext } from '../prompts/systemPrompt';
+import { buildSystemPrompt, buildUserMessage, type LLMContext } from '../prompts/adaptiveSystemPrompt';
 import { buildWelcomeMessage } from '../prompts';
 import type { Answers, RiskResult } from '../types';
 
@@ -121,8 +121,8 @@ describe('RiskCalculator Stress Tests', () => {
       age: 18,
     });
 
-    expect(age10.growthRisk).toBeGreaterThanOrEqual(15);
-    expect(age18.growthRisk).toBeGreaterThanOrEqual(10);
+    expect(age10.factors.growthRisk).toBeGreaterThanOrEqual(15);
+    expect(age18.factors.growthRisk).toBeGreaterThanOrEqual(10);
   });
 
   it('应正确处理缺失答案（默认回退）', () => {

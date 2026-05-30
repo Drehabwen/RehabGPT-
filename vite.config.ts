@@ -13,8 +13,19 @@ export default defineConfig({
   server: {
     port: 5175,
     proxy: {
-      '/api': 'http://localhost:8002',
-      '/ws': { target: 'ws://localhost:8002', ws: true },
+      '/api/chatbot': {
+        target: 'http://localhost:8002',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/api': {
+        target: 'http://localhost:8002',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8002',
+        ws: true,
+      },
     },
   },
 })

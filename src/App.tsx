@@ -37,7 +37,10 @@ function App() {
           path="/prescriptions"
           element={patientId ? <PrescriptionsPage /> : <Navigate to="/" />}
         />
-        <Route path="/result" element={<ResultPage />} />
+        <Route
+          path="/result"
+          element={patientId ? <ResultPage /> : <Navigate to="/" />}
+        />
         <Route
           path="/tracking"
           element={patientId ? <TrackingPage /> : <Navigate to="/" />}
@@ -51,6 +54,8 @@ function App() {
         <Route path="/assessment" element={<AssessmentPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/data-center" element={<DataCenterPage />} />
+        {/* 404 catch-all */}
+        <Route path="*" element={<Navigate to={patientId ? '/chat' : '/'} replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -120,7 +120,7 @@ export function buildLLMMessages(
   systemPrompt: string,
   historyMessages: ChatMessage[],
   userMessage: string,
-): Array<{ role: string; content: string }> {
+): Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content: string }> {
   // 1. 计算系统提示词 token
   const systemTokens = countTokens(systemPrompt);
 
@@ -131,7 +131,7 @@ export function buildLLMMessages(
   const truncatedHistory = truncateHistory(historyMessages, historyBudget);
 
   // 4. 组装最终消息列表
-  const messages: Array<{ role: string; content: string }> = [
+  const messages: Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content: string }> = [
     { role: 'system', content: systemPrompt },
   ];
 

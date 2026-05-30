@@ -23,10 +23,11 @@ export type ChipVariant =
   | 'improved'
   | 'stable'
   | 'worsened'
-  | 'not_measured';
+  | 'not_measured'
+  | 'tracking';
 
 export interface ChipProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   variant?: ChipVariant;
   size?: 'sm' | 'md';
   icon?: React.ReactNode;
@@ -48,11 +49,32 @@ const VARIANT_CONFIG: Record<ChipVariant, { bg: string; text: string; border: st
   stable: { bg: 'bg-[var(--color-info-light)]', text: 'text-[var(--color-info)]', border: 'border-[var(--teal-200)]' },
   worsened: { bg: 'bg-[var(--color-danger-light)]', text: 'text-[var(--color-danger)]', border: 'border-[var(--color-danger-border)]' },
   not_measured: { bg: 'bg-[var(--status-slate-100)]', text: 'text-[var(--status-slate-500)]', border: 'border-[var(--status-slate-200)]' },
+  tracking: { bg: 'bg-[var(--color-info-light)]', text: 'text-[var(--color-info)]', border: 'border-[var(--teal-200)]' },
+};
+
+const DEFAULT_LABELS: Record<ChipVariant, string> = {
+  pending: '待评估',
+  in_progress: '评估中',
+  completed: '已完成',
+  needs_retest: '待复测',
+  incomplete: '数据不完整',
+  ready: '可生成',
+  generated: '已生成',
+  attention: '需关注',
+  high_risk: '高风险',
+  medium_risk: '中风险',
+  low_risk: '低风险',
+  improved: '改善',
+  stable: '稳定',
+  worsened: '恶化',
+  not_measured: '未测定',
+  tracking: '随访中',
 };
 
 export const Chip: React.FC<ChipProps> = ({ children, variant = 'pending', size = 'sm', icon }) => {
   const config = VARIANT_CONFIG[variant];
   const sizeClass = size === 'sm' ? 'text-[var(--text-xs)] px-2 py-0.5' : 'text-[var(--text-sm)] px-2.5 py-1';
+  const renderLabel = children ?? DEFAULT_LABELS[variant] ?? '';
 
   return (
     <span
@@ -67,7 +89,7 @@ export const Chip: React.FC<ChipProps> = ({ children, variant = 'pending', size 
       `}
     >
       {icon}
-      {children}
+      {renderLabel}
     </span>
   );
 };

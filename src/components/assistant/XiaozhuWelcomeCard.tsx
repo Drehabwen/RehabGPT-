@@ -23,14 +23,14 @@ const CAPABILITIES = [
 
 export const XiaozhuWelcomeCard: React.FC<XiaozhuWelcomeCardProps> = ({ patientName, onAction }) => {
   return (
-    <Card variant="elevated" padding="none">
+    <Card variant="elevated" padding="none" radius="3xl">
       {/* 主视觉 */}
       <div className="relative bg-gradient-to-br from-[var(--ink-green-50)] via-[var(--teal-50)] to-[var(--paper-50)] px-6 py-8 overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--ink-green-100)] opacity-30 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-[var(--teal-100)] opacity-20 rounded-full translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative flex items-center gap-5">
-          <div className="flex-shrink-0 w-20 h-20 rounded-3xl bg-gradient-to-br from-[var(--ink-green-500)] to-[var(--teal-500)] flex items-center justify-center text-4xl shadow-lg shadow-[var(--ink-green-200)] border-4 border-white">
+          <div className="flex-shrink-0 w-20 h-20 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--ink-green-500)] to-[var(--teal-500)] flex items-center justify-center text-4xl shadow-[var(--shadow-md)] border-4 border-white">
             🦕
           </div>
           <div>
@@ -58,9 +58,9 @@ export const XiaozhuWelcomeCard: React.FC<XiaozhuWelcomeCardProps> = ({ patientN
               <button
                 key={cap.id}
                 onClick={() => onAction(cap.id)}
-                className={`group flex flex-col items-start gap-2 p-3.5 rounded-xl ${cap.bg} hover:shadow-md transition-all duration-200 border border-transparent hover:border-[var(--border-light)] text-left`}
+                className={`group flex flex-col items-start gap-2 p-3.5 rounded-[var(--radius-xl)] ${cap.bg} hover:shadow-md transition-all duration-200 border border-transparent hover:border-[var(--border-light)] text-left`}
               >
-                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cap.color} text-white flex items-center justify-center shadow-sm`}>
+                <div className={`w-9 h-9 rounded-[var(--radius-lg)] bg-gradient-to-br ${cap.color} text-white flex items-center justify-center shadow-sm`}>
                   <Icon className="w-4.5 h-4.5" />
                 </div>
                 <div>

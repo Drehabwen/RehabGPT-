@@ -1,12 +1,11 @@
 /**
- * Agent Tool Slice — 工具编排 + 摄像头
+ * Agent Tool Slice — 工具编排
  *
- * 职责：工具调用、会话管理、ToolBridge 结果同步、Adams 摄像头 lifecycle
+ * 职责：工具调用、会话管理、ToolBridge 结果同步
  */
 import { nanoid } from 'nanoid';
 import type { AgentState, AgentToolId } from './agentTypes';
 import { TOOL_NAMES } from './agentTypes';
-import { BRANCH_FLOWS } from '../constants/branches';
 import {
   startToolSession,
   submitToolResults,
@@ -17,14 +16,10 @@ export interface AgentToolSlice {
   activeTool: AgentToolId | null;
   suggestedTools: AgentToolId[];
   toolResults: Record<string, unknown>;
-  adamsAutoResult: AgentState['adamsAutoResult'];
 
   invokeTool: (tool: AgentToolId) => void;
   dismissTool: () => void;
   suggestTools: (tools: AgentToolId[]) => void;
-  openCamera: () => void;
-  closeCamera: () => void;
-  setAdamsAutoResult: (result: AgentState['adamsAutoResult']) => void;
 }
 
 export function createAgentToolSlice(
@@ -36,7 +31,6 @@ export function createAgentToolSlice(
     activeTool: null,
     suggestedTools: [],
     toolResults: {},
-    adamsAutoResult: null,
 
     // ── 工具调用 ──
     invokeTool: (tool) => {
@@ -53,11 +47,6 @@ export function createAgentToolSlice(
         });
       }
 
-      // adams_camera 走摄像头视图
-      if (tool === 'adams_camera') {
-        get().openCamera();
-        return;
-      }
       const toolName = TOOL_NAMES[tool] || tool;
       set((s) => ({
         activeTool: tool,
@@ -100,59 +89,5 @@ export function createAgentToolSlice(
     },
 
     suggestTools: (tools) => set({ suggestedTools: tools }),
-
-    // ── Camera ──
-    openCamera: () => set({ view: 'adams_camera' }),
-
-    closeCamera: () => {
-      const state = get();
-      const flow = BRANCH_FLOWS[state.branch];
-      const currentStep = flow?.[state.stepIndex];
-
-      // ToolBridge: sync AdamsCamera result
-      if (state.adamsAutoResult && state.patientName) {
-        const sessionId = state.toolResults._sessionId as string | undefined;
-        const backendToolId = (state.toolResults._toolId as string) || 'invoke_adams_camera';
-        if (sessionId) {
-          const result = state.adamsAutoResult;
-          submitToolResults(sessionId, backendToolId, state.patientName, {
-            recommendation: result.recommendation,
-            shoulderAsymmetry: result.shoulderAsymmetry,
-            hipAsymmetry: result.hipAsymmetry,
-            asymmetryRatio: result.asymmetryRatio,
-            ribHumpDetected: result.ribHumpDetected,
-            confidence: result.confidence,
-            summary: `Adam's test: ${result.recommendation}`,
-          }).then(() => {
-            console.log('[ToolBridge] Synced adams_camera to backend:', sessionId);
-          }).catch((err) => {
-            console.warn('[ToolBridge] Adams sync failed:', err);
-          });
-        }
-      }
-
-      set({ view: 'chat' });
-      // Camera dismissed without result — auto-skip
-      if (currentStep?.type === 'camera' && !state.adamsAutoResult) {
-        setTimeout(() => {
-          get().advanceStep('已跳过摄像头检测');
-        }, 300);
-      }
-    },
-
-    setAdamsAutoResult: (result) => {
-      set({ adamsAutoResult: result });
-      const answerValue =
-        result.recommendation === 'significant_hump'
-          ? '明显隆起'
-          : result.recommendation === 'mild_asymmetry'
-            ? '轻微不对称'
-            : '对称无隆起';
-      set((s) => ({
-        answers: { ...s.answers, adams_result: answerValue },
-      }));
-      setTimeout(() => get().closeCamera(), 500);
-      setTimeout(() => get().advanceStep(answerValue), 800);
-    },
   };
 }

@@ -3,15 +3,15 @@
  *
  * 纯类型定义和常量，无运行时逻辑，所有 slice 和外部文件共享。
  */
-import type { ChatMessage, Answers, RiskResult, AdamsAutoResult } from '../types';
+import type { ChatMessage, Answers, RiskResult } from '../types';
 import type { BranchId } from '../constants/branches';
 import type { BRANCH_FLOWS } from '../constants/branches';
 
 // ── 工具 ID（与 AssessmentTool 对齐） ──
-export type AgentToolId = 'vision3' | 'comparison' | 'rom' | 'scales' | 'adams_camera' | 'psych';
+export type AgentToolId = 'vision3' | 'comparison' | 'rom' | 'scales' | 'psych';
 
 // ── Agent 视图状态 ──
-export type AgentView = 'chat' | 'adams_camera' | 'tool' | 'result';
+export type AgentView = 'chat' | 'tool' | 'result';
 
 // ── 延迟配置（模拟自然对话节奏） ──
 export const BOT_TYPING_DELAYS = {
@@ -26,7 +26,6 @@ export const TOOL_NAMES: Record<AgentToolId, string> = {
   comparison: '对比变化',
   rom: '关节活动度',
   scales: '功能评估',
-  adams_camera: 'Adam前屈测试',
   psych: '心理筛查',
 };
 
@@ -54,7 +53,6 @@ export interface AgentState {
 
   // Results
   riskResult: RiskResult | null;
-  adamsAutoResult: AdamsAutoResult | null;
 
   // Follow-up
   hasDueReminder: boolean;
@@ -75,7 +73,7 @@ export interface AgentState {
   setBotTyping: (v: boolean) => void;
 
   // Actions — LLM conversation
-  checkLLMStatus: () => Promise<void>;
+  checkLLMStatus: () => Promise<boolean>;
   resetLLMStatus: () => void;
   sendFreeText: (text: string) => Promise<void>;
   sendFreeTextStream: (text: string) => Promise<void>;
@@ -88,11 +86,6 @@ export interface AgentState {
   invokeTool: (tool: AgentToolId) => void;
   dismissTool: () => void;
   suggestTools: (tools: AgentToolId[]) => void;
-
-  // Actions — Camera
-  openCamera: () => void;
-  closeCamera: () => void;
-  setAdamsAutoResult: (result: AdamsAutoResult) => void;
 
   // Actions — Results
   calculateAndShowResult: () => void;

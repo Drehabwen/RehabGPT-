@@ -15,10 +15,10 @@ export const ChatTyping: React.FC<ChatTypingProps> = ({ isCached = false, startT
   const [stage, setStage] = useState(0);
 
   const stages = [
-    { icon: Brain, text: '小柱正在理解您的问题...', color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { icon: Sparkles, text: '正在分析孩子的脊柱健康情况...', color: 'text-blue-500', bg: 'bg-blue-50' },
-    { icon: Clock, text: '生成专业康复建议...', color: 'text-amber-500', bg: 'bg-amber-50' },
-    { icon: Sparkles, text: '马上就好，请稍候...', color: 'text-purple-500', bg: 'bg-purple-50' },
+    { icon: Brain, text: '小柱正在理解您的问题...', color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary-light)]', dotBg: 'bg-[var(--color-primary)]', dotBgOpacity: 'bg-[var(--color-primary)]/20' },
+    { icon: Sparkles, text: '正在分析孩子的脊柱健康情况...', color: 'text-[var(--color-secondary)]', bg: 'bg-[var(--color-secondary-light)]', dotBg: 'bg-[var(--color-secondary)]', dotBgOpacity: 'bg-[var(--color-secondary)]/20' },
+    { icon: Clock, text: '生成专业康复建议...', color: 'text-[var(--color-warning)]', bg: 'bg-[var(--color-warning-light)]', dotBg: 'bg-[var(--color-warning)]', dotBgOpacity: 'bg-[var(--color-warning)]/20' },
+    { icon: Sparkles, text: '马上就好，请稍候...', color: 'text-[var(--color-secondary)]', bg: 'bg-[var(--color-secondary-light)]', dotBg: 'bg-[var(--color-secondary)]', dotBgOpacity: 'bg-[var(--color-secondary)]/20' },
   ];
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export const ChatTyping: React.FC<ChatTypingProps> = ({ isCached = false, startT
       <div className="relative">
         <Icon size={20} className={`${currentStage.color} animate-pulse`} />
         {/* 脉冲光环 */}
-        <span className={`absolute inset-0 rounded-full ${currentStage.color.replace('text-', 'bg-')} opacity-20 animate-ping`} />
+        <span className={`absolute inset-0 rounded-full ${currentStage.dotBgOpacity} animate-ping`} />
       </div>
       <div className="flex flex-col gap-1.5 min-w-[200px]">
         <span className="text-xs text-slate-600 font-medium">{currentStage.text}</span>
@@ -61,7 +61,7 @@ export const ChatTyping: React.FC<ChatTypingProps> = ({ isCached = false, startT
           {/* 进度条 */}
           <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
             <div 
-              className={`h-full ${currentStage.color.replace('text-', 'bg-')} rounded-full transition-all duration-500`}
+              className={`h-full ${currentStage.dotBg} rounded-full transition-all duration-500`}
               style={{ 
                 width: `${Math.min((elapsed / 6) * 100, 100)}%`,
               }}

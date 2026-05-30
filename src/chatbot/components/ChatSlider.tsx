@@ -67,7 +67,7 @@ export const ChatSlider: React.FC<ChatSliderProps> = ({
       )}
 
       {/* 确认按钮 */}
-      <div className="mt-4.5 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <button
           type="button"
           disabled={disabled}

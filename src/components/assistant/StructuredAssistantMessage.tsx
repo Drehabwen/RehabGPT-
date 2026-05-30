@@ -23,13 +23,13 @@ export const StructuredAssistantMessage: React.FC<StructuredAssistantMessageProp
   onAction,
 }) => {
   return (
-    <Card variant="default" padding="lg" className="bg-gradient-to-br from-[var(--ink-green-50)] to-[var(--teal-50)]">
+    <Card variant="default" padding="lg" radius="2xl" className="bg-gradient-to-br from-[var(--ink-green-50)] to-[var(--teal-50)]">
       <h3 className="text-[var(--text-base)] font-[var(--font-bold)] text-[var(--text-primary)] mb-4">{title}</h3>
 
       <div className="space-y-3 mb-5">
         {steps.map((step) => (
           <div key={step.number} className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[var(--color-primary)] text-white flex items-center justify-center text-sm font-bold">
+            <div className="flex-shrink-0 w-7 h-7 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white flex items-center justify-center text-sm font-bold">
               {step.number}
             </div>
             <p className="text-[var(--text-sm)] text-[var(--text-secondary)] leading-relaxed pt-0.5">{step.text}</p>
