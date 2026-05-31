@@ -6,7 +6,7 @@
  */
 
 import { useCallback } from 'react';
-import { useChildContextStore } from './ChildContextStore';
+import { useChildContextStore, RISK_LEVEL_MAP } from './ChildContextStore';
 import type { ChildContext, RehabStage } from './types';
 
 export function useChildContext() {
@@ -57,14 +57,8 @@ export function useChildContext() {
         setAssessment(null);
         return;
       }
-      const levelMap: Record<string, 'none' | 'low' | 'medium' | 'high'> = {
-        low: 'low', mild: 'low',
-        medium: 'medium', moderate: 'medium',
-        high: 'high',
-        none: 'none',
-      };
       setAssessment({
-        riskLevel: levelMap[data.risk_level] || 'none',
+        riskLevel: RISK_LEVEL_MAP[data.risk_level] || 'none',
         riskLabel: data.risk_label || '评估完成',
         summaryText: data.summary_text || '',
         concerns: data.concerns || [],

@@ -14,6 +14,14 @@ import type { ChildContext, ExtractionResult } from './types';
 import { DEFAULT_CHILD_CONTEXT } from './types';
 import { deriveStage, recalculateFlags, applyExtraction, consolidateMemoryForNewDay } from './updateRules';
 
+/** 康复师风险等级 → ChildContext 内部枚举映射 */
+export const RISK_LEVEL_MAP: Record<string, 'none' | 'low' | 'medium' | 'high'> = {
+  low: 'low', mild: 'low',
+  medium: 'medium', moderate: 'medium',
+  high: 'high',
+  none: 'none',
+};
+
 interface ChildContextState {
   context: ChildContext;
 

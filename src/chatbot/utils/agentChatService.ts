@@ -100,54 +100,6 @@ export interface SessionSummary {
   source: string;
 }
 
-const encodingReplacements: Array<[string, string]> = [
-  ['\u00C3\u00A9', 'é'],
-  ['\u00C3\u00A8', 'è'],
-  ['\u00C3\u00A0', 'à'],
-  ['\u00C3\u00B4', 'ô'],
-  ['\u00C3\u00AA', 'ê'],
-  ['\u00C3\u00A7', 'ç'],
-  ['\u00C3\u00B9', 'ù'],
-  ['\u00C3\u00A6', 'æ'],
-  ['\u00C3\u00AF', 'ï'],
-  ['\u00C3\u00BC', 'ü'],
-  ['\u00C3\u0178', 'ß'],
-  ['\u00C3\u00B1', 'ñ'],
-  ['\u00C3\u00A1', 'á'],
-  ['\u00C3\u00AD', 'í'],
-  ['\u00C3\u00B3', 'ó'],
-  ['\u00C3\u00BA', 'ú'],
-  ['\u00C3\u00A2', 'â'],
-  ['\u00C3\u00A3', 'ã'],
-  ['\u00C3\u00A4', 'ä'],
-  ['\u00C3\u00A5', 'å'],
-  ['\u00C3\u00AB', 'ë'],
-  ['\u00C3\u00AC', 'ì'],
-  ['\u00C3\u00AE', 'î'],
-  ['\u00C3\u00B0', 'ð'],
-  ['\u00C3\u00B2', 'ò'],
-  ['\u00C3\u00B5', 'õ'],
-  ['\u00C3\u00B6', 'ö'],
-  ['\u00C3\u00B7', '÷'],
-  ['\u00C3\u00B8', 'ø'],
-  ['\u00C3\u00BB', 'û'],
-  ['\u00C3\u00BD', 'ý'],
-  ['\u00C3\u00BE', 'þ'],
-  ['\u00C3\u00BF', 'ÿ'],
-];
-
-// ── 编码修复工具 ──
-function fixEncoding(text: string): string {
-  try {
-    let fixed = text;
-    for (const [source, target] of encodingReplacements) {
-      fixed = fixed.split(source).join(target);
-    }
-    return fixed;
-  } catch {
-    return text;
-  }
-}
 
 // ── 连续失败计数器 ──
 let consecutiveFailures = 0;
@@ -236,20 +188,17 @@ export function sendChatMessageStream(
       const data = JSON.parse(event.data);
       switch (data.type) {
         case 'token':
-          callbacks.onToken(fixEncoding(data.content));
+          callbacks.onToken(data.content);
           break;
         case 'done':
           resetFailureCount();
           const result = data.result as ChatResponse;
-          if (result.content) {
-            result.content = fixEncoding(result.content);
-          }
           callbacks.onDone(result);
           close();
           break;
         case 'error':
           consecutiveFailures++;
-          callbacks.onError(fixEncoding(data.content));
+          callbacks.onError(data.content);
           close();
           break;
       }

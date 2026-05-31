@@ -44,6 +44,8 @@ export function createAgentToolSlice(
               toolResults: { ...s.toolResults, _sessionId: session.sessionId, _toolId: backendToolId },
             }));
           }
+        }).catch((err) => {
+          console.warn('[AgentStore] Tool session start failed:', err);
         });
       }
 

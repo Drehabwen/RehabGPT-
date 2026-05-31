@@ -13,6 +13,7 @@ import { useTrackingStore } from '../../tracking/store/useTrackingStore';
 import type { TrackingSummary } from '../../tracking/types';
 import { useAssessmentSummary } from './useAssessmentSummary';
 import { useTreatmentPlan } from './useTreatmentPlan';
+import { RISK_LEVEL_MAP } from '../../context/ChildContextStore';
 // Phase D: 结构化上下文同步
 import { useChildContextStore } from '../../context/ChildContextStore';
 
@@ -132,14 +133,8 @@ export function useChatPageData() {
   // Phase D: 同步 API 数据到 ChildContext
   useEffect(() => {
     if (assessment) {
-      const levelMap: Record<string, 'none' | 'low' | 'medium' | 'high'> = {
-        low: 'low', mild: 'low',
-        medium: 'medium', moderate: 'medium',
-        high: 'high',
-        none: 'none',
-      };
       useChildContextStore.getState().setAssessment({
-        riskLevel: levelMap[assessment.risk_level] || 'none',
+        riskLevel: RISK_LEVEL_MAP[assessment.risk_level] || 'none',
         riskLabel: assessment.risk_label || '评估完成',
         summaryText: assessment.summary_text || '',
         concerns: assessment.concerns || [],
@@ -188,18 +183,10 @@ export function useChatPageData() {
   const finalScreeningData = useMemo(() => {
     // Phase 3: 康复师推送的评估摘要优先
     if (assessment) {
-      const levelMap: Record<string, 'none' | 'low' | 'medium' | 'high'> = {
-        low: 'low',
-        mild: 'low',
-        medium: 'medium',
-        moderate: 'medium',
-        high: 'high',
-        none: 'none',
-      };
       return {
         isEmpty: false as const,
         date: assessment.created_at?.split('T')[0] || '最近',
-        riskLevel: levelMap[assessment.risk_level] || 'none',
+        riskLevel: RISK_LEVEL_MAP[assessment.risk_level] || 'none',
         riskLabel: assessment.risk_label || '评估完成',
         recommendation: assessment.summary_text,
         concerns: assessment.concerns || [],

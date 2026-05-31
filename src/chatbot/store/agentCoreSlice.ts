@@ -176,6 +176,8 @@ export function createAgentCoreSlice(
         } else {
           console.warn('[AgentStore] LLM not available, using rule engine fallback');
         }
+      }).catch((err) => {
+        console.warn('[AgentStore] LLM health check failed:', err);
       });
 
       // Load patient history from backend (non-blocking)
