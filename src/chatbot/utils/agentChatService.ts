@@ -101,57 +101,50 @@ export interface SessionSummary {
   source: string;
 }
 
+const encodingReplacements: Array<[string, string]> = [
+  ['\u00C3\u00A9', 'é'],
+  ['\u00C3\u00A8', 'è'],
+  ['\u00C3\u00A0', 'à'],
+  ['\u00C3\u00B4', 'ô'],
+  ['\u00C3\u00AA', 'ê'],
+  ['\u00C3\u00A7', 'ç'],
+  ['\u00C3\u00B9', 'ù'],
+  ['\u00C3\u00A6', 'æ'],
+  ['\u00C3\u00AF', 'ï'],
+  ['\u00C3\u00BC', 'ü'],
+  ['\u00C3\u0178', 'ß'],
+  ['\u00C3\u00B1', 'ñ'],
+  ['\u00C3\u00A1', 'á'],
+  ['\u00C3\u00AD', 'í'],
+  ['\u00C3\u00B3', 'ó'],
+  ['\u00C3\u00BA', 'ú'],
+  ['\u00C3\u00A2', 'â'],
+  ['\u00C3\u00A3', 'ã'],
+  ['\u00C3\u00A4', 'ä'],
+  ['\u00C3\u00A5', 'å'],
+  ['\u00C3\u00AB', 'ë'],
+  ['\u00C3\u00AC', 'ì'],
+  ['\u00C3\u00AE', 'î'],
+  ['\u00C3\u00B0', 'ð'],
+  ['\u00C3\u00B2', 'ò'],
+  ['\u00C3\u00B5', 'õ'],
+  ['\u00C3\u00B6', 'ö'],
+  ['\u00C3\u00B7', '÷'],
+  ['\u00C3\u00B8', 'ø'],
+  ['\u00C3\u00BB', 'û'],
+  ['\u00C3\u00BD', 'ý'],
+  ['\u00C3\u00BE', 'þ'],
+  ['\u00C3\u00BF', 'ÿ'],
+];
+
 // ── 编码修复工具 ──
 function fixEncoding(text: string): string {
   try {
-    // 修复常见的编码问题
-    return text
-      .replace(/Ã©/g, 'é')
-      .replace(/Ã¨/g, 'è')
-      .replace(/Ã /g, 'à')
-      .replace(/Ã´/g, 'ô')
-      .replace(/Ãª/g, 'ê')
-      .replace(/Ã§/g, 'ç')
-      .replace(/Ã¹/g, 'ù')
-      .replace(/Ã¦/g, 'æ')
-      .replace(/Ã¯/g, 'ï')
-      .replace(/Ã¼/g, 'ü')
-      .replace(/ÃŸ/g, 'ß')
-      .replace(/Ã±/g, 'ñ')
-      .replace(/Ã¡/g, 'á')
-      .replace(/Ã­/g, 'í')
-      .replace(/Ã³/g, 'ó')
-      .replace(/Ãº/g, 'ú')
-      .replace(/Ã¢/g, 'â')
-      .replace(/Ã£/g, 'ã')
-      .replace(/Ã¤/g, 'ä')
-      .replace(/Ã¥/g, 'å')
-      .replace(/Ã¦/g, 'æ')
-      .replace(/Ã§/g, 'ç')
-      .replace(/Ã¨/g, 'è')
-      .replace(/Ã©/g, 'é')
-      .replace(/Ãª/g, 'ê')
-      .replace(/Ã«/g, 'ë')
-      .replace(/Ã¬/g, 'ì')
-      .replace(/Ã­/g, 'í')
-      .replace(/Ã®/g, 'î')
-      .replace(/Ã¯/g, 'ï')
-      .replace(/Ã°/g, 'ð')
-      .replace(/Ã±/g, 'ñ')
-      .replace(/Ã²/g, 'ò')
-      .replace(/Ã³/g, 'ó')
-      .replace(/Ã´/g, 'ô')
-      .replace(/Ãµ/g, 'õ')
-      .replace(/Ã¶/g, 'ö')
-      .replace(/Ã·/g, '÷')
-      .replace(/Ã¸/g, 'ø')
-      .replace(/Ã¹/g, 'ù')
-      .replace(/Ãº/g, 'ú')
-      .replace(/Ã»/g, 'û')
-      .replace(/Ã¼/g, 'ü')
-      .replace(/Ã½/g, 'ý')
-      .replace(/Ã¾/g, 'þ')
-      .replace(/Ã¿/g, 'ÿ');
+    let fixed = text;
+    for (const [source, target] of encodingReplacements) {
+      fixed = fixed.split(source).join(target);
+    }
+    return fixed;
   } catch {
     return text;
   }

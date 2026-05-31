@@ -1,11 +1,11 @@
 # 小柱 · 脊柱健康助手 (XiaoZhu Spine Health Assistant)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-19.2.6-61DAFB?logo=react" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/React-19.2-61DAFB?logo=react" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/TailwindCSS-4.3-06B6D4?logo=tailwindcss" alt="TailwindCSS">
   <img src="https://img.shields.io/badge/Zustand-5.0-FF6B6B?logo=react" alt="Zustand">
-  <img src="https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Vite-6.3-646CFF?logo=vite" alt="Vite">
   <img src="https://img.shields.io/badge/DeepSeek-LLM-1E90FF?logo=openai" alt="DeepSeek">
 </p>
 
@@ -17,48 +17,96 @@
 
 ## 项目简介
 
-**小柱** 是一款面向脊柱侧弯患者家长的智能康复助手，基于大语言模型（LLM）技术，提供从筛查评估、日常答疑到康复追踪的全流程支持。
+**小柱** 是一款面向脊柱侧弯患者家长端的智能康复助手，定位为**康复师指令的承接终端** —— 康复师做判断，家长做执行。
 
-### 核心痛点
-脊柱侧弯患者的康复周期长达数年，家长需要：
-- 📋 理解复杂的医学术语和康复方案
-- 💬 随时咨询日常护理问题（支具佩戴、训练动作等）
-- 📊 长期追踪孩子的疼痛、训练、支具佩戴情况
-- 📢 及时向康复师汇报异常状况
+家长通过康复师提供的**家庭码**绑定孩子档案后，即可查看评估报告、执行训练处方、完成每日打卡，所有数据自动同步至康复师端。
 
-### 解决方案
+### 产品定位
+
+```
+康复师端（专业判断）              家长端（执行承接）
+┌─────────────────────┐          ┌──────────────────────┐
+│ · 专业评估            │   推送    │ · 查看评估报告         │
+│ · 制定训练处方        │ ──────→ │ · 执行训练打卡         │
+│ · 下发量表评定        │          │ · 填写量表问卷         │
+│ · 查看打卡数据        │ ←────── │ · 日常症状记录         │
+└─────────────────────┘   回流    └──────────────────────┘
+```
+
+### 核心功能
+
 | 模块 | 功能 | 技术亮点 |
 |------|------|----------|
-| **智能对话** | 日常答疑、医学术语通俗化 | 本地缓存 + WebSocket 流式传输，高频问题秒回 |
-| **康复处方** | 查看康复师开具的训练方案 | 实时同步，支持反馈打卡 |
-| **日常追踪** | 每日2分钟记录疼痛/训练/支具/情绪 | 自动预警 + 7天趋势可视化 |
-| **评估报告** | LLM 生成个性化康复进展报告 | 异步生成，不阻塞用户操作 |
+| **智能对话** | 日常答疑、医学术语通俗化 | 意图路由 + 结构化上下文注入 + WebSocket 流式 + 本地缓存 |
+| **评估报告** | 查看康复师推送的专业评估 | 自动拉取最新评估摘要，支持风险等级可视化 |
+| **训练处方** | 执行康复师制定的训练计划 | 实时同步处方内容，打卡数据自动回传 |
+| **每日打卡** | 2分钟记录疼痛/训练/支具/情绪 | 自动预警 + 7天趋势 + ChildContext 进度同步 |
+| **量表评定** | 填写康复师下发的 SRS-22/ODI/VAS | 嵌入式填写，结果自动回传 |
+
+---
+
+## 版本历史
+
+| 版本 | 日期 | 更新内容 |
+|------|------|----------|
+| **v2.1.0** | 2026-05 | 结构化上下文工程：意图路由 + 动态注入 + 提取闭环 |
+| **v2.0.0** | 2026-05 | 家长端重新定位为康复师指令承接终端，砍掉自筛流程 |
+| v1.x | 2026-04 | 初始版本：智能对话 + 拍照初筛 + 日常追踪 |
+
+### v2.1.0 — 结构化上下文工程
+
+- **7层结构化 ChildContext**：identity / assessment / treatment / progress / memory / flags / stage
+- **RehabStage 状态机**：unbound → waiting_assessment → assessed → in_training → awaiting_review → completed
+- **规则引擎意图路由**：5种意图（chat / training / assessment / medical / feedback），加权关键词打分
+- **动态注入引擎**：系统提示词按意图裁剪至 200-570 tokens（节省 ~40%）
+- **异步提取闭环**：对话后 LLM 提取要点 → JSON → 回写 ChildContext，附退避机制
+- **跨日记忆收敛**：自动清理过期话题，保留关键上下文
+
+### v2.0.0 — 家长端重新定位
+
+- **删除**：拍照初筛、自建患者、Adams 拍照、reassess 分支
+- **重构**：数据源从"家长自筛"切换到"康复师推送"
+- **新增**：4条康复师↔家长 API 通道（处方推送/评估摘要/打卡上传/家庭码绑定）
+- **底部导航**：4 tab → 3 tab（首页 / 训练打卡 / 评估报告）
+- **Design System**：统一设计令牌 + 基础UI组件库（Button/Card/Chip/Badge/Input/Progress）+ 临床/报告/布局组件
 
 ---
 
 ## 技术架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        前端 (Frontend)                       │
-│  React 19 + TypeScript + Vite + TailwindCSS + Zustand       │
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  智能对话    │  │  康复处方    │  │  日常追踪系统        │ │
-│  │  Chatbot    │  │Prescriptions│  │  Tracking System    │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ WebSocket / HTTP
-┌─────────────────────────────────────────────────────────────┐
-│                        后端 (Backend)                        │
-│  FastAPI + Python + WebSocket + DeepSeek API                │
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  LLM 对话   │  │  处方管理    │  │  报告生成服务        │ │
-│  │  Service    │  │  API        │  │  Report Generator   │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         前端 (Frontend)                           │
+│  React 19 + TypeScript + Vite + TailwindCSS + Zustand            │
+│                                                                  │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌──────────────────┐ │
+│  │ 智能对话   │ │ 评估报告   │ │ 训练打卡   │ │ 结构化上下文引擎  │ │
+│  │ Chatbot   │ │ Report    │ │ Tracking  │ │ Context Engine   │ │
+│  │           │ │           │ │           │ │ · Intent Router  │ │
+│  │ · 流式LLM │ │ · 评估摘要 │ │ · 训练处方 │ │ · Injection      │ │
+│  │ · 意图路由│ │ · 风险雷达 │ │ · 每日打卡 │ │ · Extraction     │ │
+│  │ · 量表填写│ │ · 趋势图表 │ │ · 趋势总览 │ │ · Memory         │ │
+│  └───────────┘ └───────────┘ └───────────┘ └──────────────────┘ │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │ Design System: tokens.css + UI Kit (Button/Card/Chip/...)     │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼ HTTP / WebSocket
+┌──────────────────────────────────────────────────────────────────┐
+│                         后端 (Backend)                            │
+│  FastAPI + WebSocket + DeepSeek API                              │
+│                                                                  │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌──────────────────┐ │
+│  │ LLM 对话   │ │ 处方管理   │ │ 评估管理   │ │ 家庭码绑定        │ │
+│  │ Service   │ │ Plan API  │ │ Assmt API │ │ Family Link API  │ │
+│  └───────────┘ └───────────┘ └───────────┘ └──────────────────┘ │
+│  ┌───────────┐ ┌───────────┐                                     │
+│  │ 打卡回流   │ │ 量表管理   │                                     │
+│  │ Tracking  │ │ Scale API │                                     │
+│  └───────────┘ └───────────┘                                     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -66,43 +114,52 @@
 ## 功能特性
 
 ### 1. 智能对话 (Smart Chat)
-- **本地缓存**：15个高频问题预设回复，无需等待 LLM
-- **流式传输**：WebSocket 实时输出，减少等待焦虑
-- **智能状态**："正在连接"→"正在思考"→"正在生成"，清晰反馈
-- **离线兜底**：连续失败自动切换离线模式，保证可用性
 
-### 2. 日常追踪 (Daily Tracking)
-- **4步向导**：疼痛 → 训练 → 支具 → 其他，2分钟完成
+- **意图路由**：规则引擎 5 类意图分类，低置信度 LLM 兜底
+- **上下文注入**：按意图动态装配系统提示词（200-570 tokens），含身份/评估/治疗/进度/记忆
+- **流式传输**：WebSocket 实时输出 + 本地缓存命中即时响应
+- **提取闭环**：对话后异步 LLM 提取要点，自动回写 ChildContext
+- **离线兜底**：连续失败自动切换规则引擎，保证可用性
+
+### 2. 评估报告 (Assessment Report)
+
+- **数据来源**：康复师端推送的专业评估摘要（非家长自筛）
+- **风险可视化**：RiskRadarCard + RiskGauge 展示风险等级
+- **关注点展示**：体态不对称、弯曲度、疼痛、家族史、生长风险
+- **空状态**：未绑定时显示"等待康复师评估"
+
+### 3. 训练打卡 (Training & Tracking)
+
+- **训练处方** tab：展示康复师推送的个性化训练方案（动作/组数/备注）
+- **每日打卡** tab：4步向导（疼痛 → 训练 → 支具 → 其他），2分钟完成
+- **趋势总览** tab：7天疼痛/训练/支具柱状图 + 依从性统计
 - **自动预警**：
-  - 🔴 疼痛 ≥ 7分 → 高优先级预警
-  - 🟡 未完成训练 → 中优先级提醒
-  - 🟡 支具佩戴 < 12小时 → 佩戴不足提醒
-  - 🔴 异常症状 → 立即预警
-- **趋势可视化**：7天疼痛/训练/支具柱状图，直观展示康复进展
-- **本地持久化**：Zustand + persist，刷新不丢失
+  - 🔴 疼痛 ≥ 7分 → 高优先级
+  - 🟡 训练缺失/支具不足 → 中优先级
+  - 🔴 异常症状/皮肤破溃 → 高优先级
+  - 🔵 情绪低落 → 低优先级
+- **数据上行**：打卡后静默同步至后端（失败不影响本地保存）
 
-### 3. 康复处方 (Prescriptions)
-- 查看康复师开具的个性化训练方案
-- 支持"收到/执行中/完成/有疑问"四种反馈状态
-- 留言功能，方便与康复师沟通
+### 4. 量表评定 (Scales)
+
+- 填写康复师下发的 SRS-22 / ODI / VAS 量表
+- 对话内嵌入式填写，无需跳转
+- 提交后自动回传康复师端
 
 ---
 
 ## 快速开始
 
 ### 环境要求
+
 - Node.js ≥ 18
-- Python ≥ 3.10
+- npm ≥ 9
 - DeepSeek API Key
 
 ### 安装依赖
 
 ```bash
-# 前端依赖
 npm install
-
-# 后端依赖 (如果需要本地 LLM 服务)
-pip install fastapi uvicorn websockets httpx
 ```
 
 ### 配置环境变量
@@ -111,11 +168,14 @@ pip install fastapi uvicorn websockets httpx
 
 ```env
 # DeepSeek API
-DEEPSEEK_API_KEY=your_api_key_here
-DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
+VITE_DEEPSEEK_API_KEY=your_api_key_here
+VITE_DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
 
-# 可选：本地模型配置
-LOCAL_MODEL_ENABLED=false
+# 后端 API 地址（如使用独立后端）
+VITE_API_BASE=http://localhost:8000
+
+# 可选：启用旧版患者绑定接口
+VITE_ENABLE_LEGACY_SUBJECT_LINK=false
 ```
 
 ### 启动项目
@@ -124,12 +184,14 @@ LOCAL_MODEL_ENABLED=false
 # 启动前端开发服务器
 npm run dev
 
-# 启动后端服务（另一个终端）
-npm run server
+# 构建生产版本
+npm run build
+
+# 预览生产构建
+npm run preview
 ```
 
 前端默认运行在 `http://localhost:5173`
-后端默认运行在 `http://localhost:3000`
 
 ---
 
@@ -138,22 +200,122 @@ npm run server
 ```
 chatbotagent/
 ├── src/
-│   ├── chatbot/              # 智能对话模块
-│   │   ├── components/       # 聊天UI组件
-│   │   ├── store/            # Zustand状态管理
-│   │   ├── utils/            # 工具函数（缓存、LLM服务）
-│   │   └── prompts/          # LLM提示词工程
-│   ├── tracking/             # 日常追踪系统 ⭐ 新增
-│   │   ├── components/       # 表单+仪表板
-│   │   ├── store/            # 追踪数据状态
-│   │   └── types.ts          # 类型定义
-│   ├── pages/                # 页面组件
-│   ├── api/                  # API接口
-│   └── App.tsx               # 路由配置
-├── server/                   # 后端服务
-│   ├── index.ts              # FastAPI入口
-│   └── llmClient.ts          # LLM客户端
+│   ├── chatbot/                    # 智能对话模块
+│   │   ├── components/             # 聊天UI组件 (ChatWindow, QuickQuestions, ScaleForm...)
+│   │   ├── constants/              # 分支路由 + 流程定义
+│   │   ├── prompts/                # LLM提示词工程 + 系统提示词
+│   │   ├── store/                  # Zustand状态管理
+│   │   │   ├── agentCoreSlice.ts   # 对话引擎 + 生命周期
+│   │   │   ├── agentLLMSlice.ts    # LLM集成 + 流式对话 + 提取闭环
+│   │   │   ├── agentToolSlice.ts   # 工具调用
+│   │   │   └── agentTypes.ts       # 类型定义
+│   │   ├── utils/                  # 工具函数 (缓存/LLM服务/Token计数/上下文窗口)
+│   │   └── types.ts
+│   ├── context/                    # 结构化上下文引擎 ⭐ v2.1.0
+│   │   ├── types.ts                # ChildContext 7层模型类型
+│   │   ├── ChildContextStore.ts    # Zustand上下文Store (persist)
+│   │   ├── intentRouter.ts         # 规则引擎意图路由器
+│   │   ├── injectionEngine.ts      # 动态系统提示词装配
+│   │   ├── extractionService.ts    # 对话后异步提取服务
+│   │   ├── updateRules.ts          # 状态推导 + 标记计算纯函数
+│   │   └── useChildContext.ts      # 统一Hook
+│   ├── tracking/                   # 日常追踪系统
+│   │   ├── components/             # DailyTrackingForm + TrackingDashboard
+│   │   ├── store/                  # useTrackingStore (localStorage persist)
+│   │   └── types.ts
+│   ├── components/
+│   │   ├── ui/                     # 基础UI组件 (Button/Card/Chip/Badge/Input/Progress)
+│   │   ├── layout/                 # 布局组件 (AppShell/PageHeader/SectionHeader/SidebarNav)
+│   │   ├── clinical/               # 临床组件 (RiskRadarCard/PatientContextBar/AssessmentModuleCard...)
+│   │   ├── report/                 # 报告组件 (TrendMiniChart/MetricDelta/ReportStatusPanel...)
+│   │   └── assistant/              # 助手组件 (BottomNav/Greeting/Advice/TodayActions...)
+│   ├── pages/                      # 页面组件
+│   │   ├── ChatPage.tsx            # 首页 — 智能对话工作台
+│   │   ├── TrackingPage.tsx        # 训练打卡 — 3 tab
+│   │   ├── ResultPage.tsx          # 评估报告页
+│   │   ├── LoginPage.tsx           # 家庭码登录
+│   │   ├── PrescriptionsPage.tsx   # 处方详情
+│   │   ├── ScalesPage.tsx          # 量表中心
+│   │   ├── hooks/                  # 页面数据层 hooks
+│   │   ├── assessment/             # 评估页
+│   │   ├── dashboard/              # 仪表板
+│   │   └── reports/                # 报告页
+│   ├── styles/
+│   │   ├── tokens.css              # Design Tokens (颜色/字体/间距/圆角/阴影)
+│   │   └── globals.css             # 全局样式 + 动画
+│   ├── api/                        # API封装
+│   ├── types/                      # 全局类型
+│   ├── App.tsx                     # 路由配置
+│   └── main.tsx                    # 入口
+├── server/                         # 后端服务 (FastAPI)
 └── package.json
+```
+
+---
+
+## 数据流
+
+### 家长端核心数据流
+
+```
+ LoginPage                  ChatPage                    TrackingPage
+ ┌──────────┐             ┌──────────────┐             ┌──────────────┐
+ │ 输入家庭码 │ ────────→ │ 初始化Chatbot │             │              │
+ │ 绑定患者  │   patientId │ + ChildContext│             │              │
+ └──────────┘             └──────┬───────┘             └──────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+             ┌─────────────┐          ┌─────────────┐
+             │ 拉取评估摘要  │          │ 拉取训练处方  │
+             │ GET /assmt/  │          │ GET /plan/   │
+             │ summary/{id} │          │ pending/{id} │
+             └──────┬──────┘          └──────┬──────┘
+                    │                         │
+                    ▼                         ▼
+             ┌─────────────┐          ┌─────────────┐
+             │ ChildContext │          │ ChildContext │
+             │ .assessment  │          │ .treatment   │
+             └─────────────┘          └─────────────┘
+                                           │
+                          ┌────────────────┴────────────────┐
+                          ▼                                 ▼
+                   ┌─────────────┐                   ┌─────────────┐
+                   │ 小柱建议     │                   │ 训练打卡     │
+                   │ (LLM驱动)   │                   │ submitDaily │
+                   └─────────────┘                   └──────┬──────┘
+                                                           │
+                                              POST /tracking/submit
+                                                           │
+                                                           ▼
+                                                   ┌─────────────┐
+                                                   │ 康复师端     │
+                                                   │ 查看打卡数据  │
+                                                   └─────────────┘
+```
+
+### 对话上下文流 (v2.1.0)
+
+```
+ 用户输入 → classifyIntent() → buildDynamicSystemPrompt(intent, ctx)
+                │                        │
+                ▼                        ▼
+          5种意图分类            按意图裁剪提示词(200-570t)
+                │                        │
+                └────────┬───────────────┘
+                         ▼
+                   sendFreeTextStream()
+                         │
+                         ▼
+                   LLM 流式回复
+                         │
+                         ▼
+                   shouldExtract() ?
+                    │        │
+                   Yes       No → 结束
+                    │
+                    ▼
+            scheduleExtraction() → 异步LLM提取 → JSON → ChildContext.writeback
 ```
 
 ---
@@ -198,118 +360,117 @@ chatbotagent/
 
 ## Introduction
 
-**XiaoZhu** is an intelligent rehabilitation assistant for parents of scoliosis patients, powered by Large Language Model (LLM) technology, providing full-process support from screening assessment, daily Q&A to rehabilitation tracking.
+**XiaoZhu** is an intelligent rehabilitation assistant for parents of scoliosis patients, positioned as a **therapist instruction terminal** — therapists make the clinical judgments, parents handle the execution.
 
-### Core Pain Points
-The rehabilitation cycle for scoliosis patients lasts several years. Parents need to:
-- 📋 Understand complex medical terminology and rehabilitation plans
-- 💬 Consult daily care questions anytime (brace wearing, training exercises, etc.)
-- 📊 Long-term tracking of child's pain, training, and brace wearing status
-- 📢 Report abnormal conditions to therapists in a timely manner
+Parents bind their child's profile via a **family code** provided by their therapist, then view assessment reports, execute training prescriptions, and complete daily check-ins. All data syncs automatically back to the therapist's dashboard.
 
-### Solutions
+### Product Positioning
+
+```
+Therapist Side (Clinical Judgment)       Parent Side (Execution)
+┌─────────────────────┐          ┌──────────────────────┐
+│ · Professional assess│   Push   │ · View reports        │
+│ · Prescribe training │ ──────→ │ · Execute exercises   │
+│ · Assign scales      │          │ · Complete scales     │
+│ · Review check-in    │ ←────── │ · Daily symptom log   │
+└─────────────────────┘   Sync   └──────────────────────┘
+```
+
+### Core Modules
+
 | Module | Function | Technical Highlights |
 |--------|----------|---------------------|
-| **Smart Chat** | Daily Q&A, medical term simplification | Local cache + WebSocket streaming, instant response for frequent questions |
-| **Prescriptions** | View training plans prescribed by therapists | Real-time sync, supports feedback check-in |
-| **Daily Tracking** | 2-minute daily recording of pain/training/brace/mood | Auto alerts + 7-day trend visualization |
-| **Assessment Report** | LLM-generated personalized rehabilitation progress reports | Async generation, non-blocking user operations |
+| **Smart Chat** | Daily Q&A, medical term explanation | Intent routing + structured context injection + WebSocket streaming + local cache |
+| **Assessment** | View therapist-pushed assessment reports | Auto-fetch latest summary, risk level visualization |
+| **Prescriptions** | Execute therapist-designed training plans | Real-time sync, auto check-in feedback |
+| **Daily Tracking** | 2-min daily pain/training/brace/mood log | Auto alerts + 7-day trends + ChildContext sync |
+| **Scales** | Complete SRS-22/ODI/VAS assigned by therapist | Embedded form, auto-submit results |
+
+---
+
+## Version History
+
+| Version | Date | Highlights |
+|---------|------|------------|
+| **v2.1.0** | 2026-05 | Structured Context Engineering: intent router + dynamic injection + extraction loop |
+| **v2.0.0** | 2026-05 | Repositioned as therapist instruction terminal, removed self-screening flow |
+| v1.x | 2026-04 | Initial: smart chat + photo screening + daily tracking |
 
 ---
 
 ## Tech Stack
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend                             │
-│  React 19 + TypeScript + Vite + TailwindCSS + Zustand       │
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  Smart Chat │  │Prescriptions│  │  Tracking System    │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ WebSocket / HTTP
-┌─────────────────────────────────────────────────────────────┐
-│                        Backend                              │
-│  FastAPI + Python + WebSocket + DeepSeek API                │
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  LLM Chat   │  │ Prescription│  │  Report Generator   │ │
-│  │  Service    │  │  API        │  │  Service            │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
+- **Frontend**: React 19, TypeScript 5.8, Vite 6.3, TailwindCSS 4.3, Zustand 5.0
+- **Backend**: FastAPI, WebSocket, DeepSeek API
+- **Design System**: Custom design tokens (tokens.css) + reusable UI component library
 
 ---
 
 ## Features
 
 ### 1. Smart Chat
-- **Local Cache**: 15 preset responses for frequent questions, no LLM waiting
-- **Streaming**: WebSocket real-time output, reducing waiting anxiety
-- **Smart Status**: "Connecting" → "Thinking" → "Generating", clear feedback
-- **Offline Fallback**: Auto-switch to offline mode after consecutive failures
 
-### 2. Daily Tracking ⭐ New
-- **4-Step Wizard**: Pain → Training → Brace → Others, complete in 2 minutes
-- **Auto Alerts**:
-  - 🔴 Pain ≥ 7/10 → High priority alert
-  - 🟡 Training missed → Medium priority reminder
-  - 🟡 Brace wearing < 12 hours → Insufficient wearing alert
-  - 🔴 Abnormal symptoms → Immediate alert
-- **Trend Visualization**: 7-day bar charts for pain/training/brace
-- **Local Persistence**: Zustand + persist, data survives page refresh
+- **Intent Router**: Rule-based 5-type intent classification, LLM fallback for low confidence
+- **Context Injection**: Dynamic system prompt assembly per intent (200-570 tokens), covering identity/assessment/treatment/progress/memory
+- **Streaming**: WebSocket real-time output + instant cache-hit responses
+- **Extraction Loop**: Async LLM extraction post-dialogue → JSON → ChildContext writeback with backoff
+- **Offline Fallback**: Auto-switch to rule engine after consecutive failures
 
-### 3. Prescriptions
-- View personalized training plans prescribed by therapists
-- Four feedback states: "Acknowledged/In Progress/Completed/Questions"
-- Message function for easy communication with therapists
+### 2. Assessment Report
+
+- **Data Source**: Therapist-pushed professional assessment summaries (not parent self-screening)
+- **Risk Visualization**: RiskRadarCard + RiskGauge for risk level display
+- **Concern Tracking**: Posture asymmetry, curvature, pain, family history, growth risk
+- **Empty State**: "Awaiting therapist assessment" when unbound
+
+### 3. Training & Tracking
+
+- **Prescription Tab**: Therapist-designed training plan (exercises/sets/notes)
+- **Daily Check-in Tab**: 4-step wizard (Pain → Training → Brace → Other), 2 minutes
+- **Trends Tab**: 7-day bar charts + adherence statistics
+- **Auto Alerts**: Pain ≥ 7 (high), missed training (medium), brace < 12h (medium), abnormal symptoms (high), mood low (low)
+- **Data Upload**: Silent sync to backend after check-in (non-blocking)
+
+### 4. Scales
+
+- Complete therapist-assigned SRS-22 / ODI / VAS scales
+- Embedded in-chat completion, no page navigation needed
+- Auto-submit results back to therapist
 
 ---
 
 ## Quick Start
 
 ### Requirements
+
 - Node.js ≥ 18
-- Python ≥ 3.10
+- npm ≥ 9
 - DeepSeek API Key
 
-### Install Dependencies
+### Install
 
 ```bash
-# Frontend dependencies
 npm install
-
-# Backend dependencies (if local LLM service needed)
-pip install fastapi uvicorn websockets httpx
 ```
 
 ### Environment Variables
 
-Create `.env` file:
+Create `.env`:
 
 ```env
-# DeepSeek API
-DEEPSEEK_API_KEY=your_api_key_here
-DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
-
-# Optional: Local model config
-LOCAL_MODEL_ENABLED=false
+VITE_DEEPSEEK_API_KEY=your_api_key_here
+VITE_DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
+VITE_API_BASE=http://localhost:8000
+VITE_ENABLE_LEGACY_SUBJECT_LINK=false
 ```
 
-### Start Project
+### Start
 
 ```bash
-# Start frontend dev server
-npm run dev
-
-# Start backend server (another terminal)
-npm run server
+npm run dev      # Dev server at http://localhost:5173
+npm run build    # Production build
+npm run preview  # Preview production build
 ```
-
-Frontend: `http://localhost:5173`
-Backend: `http://localhost:3000`
 
 ---
 
@@ -318,21 +479,30 @@ Backend: `http://localhost:3000`
 ```
 chatbotagent/
 ├── src/
-│   ├── chatbot/              # Smart chat module
-│   │   ├── components/       # Chat UI components
-│   │   ├── store/            # Zustand state management
-│   │   ├── utils/            # Utilities (cache, LLM service)
-│   │   └── prompts/          # LLM prompt engineering
-│   ├── tracking/             # Daily tracking system ⭐ New
-│   │   ├── components/       # Form + Dashboard
-│   │   ├── store/            # Tracking data state
-│   │   └── types.ts          # Type definitions
-│   ├── pages/                # Page components
-│   ├── api/                  # API interfaces
-│   └── App.tsx               # Route config
-├── server/                   # Backend service
-│   ├── index.ts              # FastAPI entry
-│   └── llmClient.ts          # LLM client
+│   ├── chatbot/                    # Chat engine + LLM integration
+│   │   ├── components/             # Chat UI (ChatWindow, QuickQuestions, ScaleForm...)
+│   │   ├── constants/              # Branch routing + flow definitions
+│   │   ├── prompts/                # LLM prompt engineering
+│   │   ├── store/                  # Zustand state (core/LLM/tool/report slices)
+│   │   └── utils/                  # Cache, LLM service, token counter, context window
+│   ├── context/                    # Structured Context Engine ⭐ v2.1.0
+│   │   ├── types.ts                # ChildContext 7-layer model
+│   │   ├── ChildContextStore.ts    # Zustand context store (persist)
+│   │   ├── intentRouter.ts         # Rule-based intent classifier
+│   │   ├── injectionEngine.ts      # Dynamic system prompt assembler
+│   │   ├── extractionService.ts    # Async post-dialogue extraction
+│   │   └── updateRules.ts          # State derivation pure functions
+│   ├── tracking/                   # Daily tracking system
+│   ├── components/
+│   │   ├── ui/                     # UI Kit (Button/Card/Chip/Badge/Input/Progress)
+│   │   ├── layout/                 # Layout (AppShell/PageHeader/SectionHeader)
+│   │   ├── clinical/               # Clinical (RiskRadar/PatientContext/AssessmentModule)
+│   │   ├── report/                 # Reports (TrendMiniChart/MetricDelta/ReportStatus)
+│   │   └── assistant/              # Assistant (BottomNav/Greeting/Advice/TodayActions)
+│   ├── pages/                      # Pages + data hooks
+│   ├── styles/                     # tokens.css + globals.css
+│   └── api/                        # API wrappers
+├── server/                         # Backend (FastAPI)
 └── package.json
 ```
 
@@ -353,12 +523,6 @@ Issues and PRs are welcome!
 ## License
 
 [MIT License](./LICENSE)
-
----
-
-## Contact
-
-For questions or suggestions, please contact via GitHub Issue.
 
 ---
 

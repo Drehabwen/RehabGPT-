@@ -132,3 +132,39 @@ export async function* streamChatCompletion(
 export function isConfigured(): boolean {
   return API_KEY.length > 0;
 }
+
+/**
+ * Generate a concise session summary from conversation messages.
+ * Used by the cross-day consolidation flow in the frontend agentLLMSlice.
+ */
+export async function generateSessionSummary(
+  messages: LLMMessage[],
+  patientName: string,
+): Promise<{ summary: string } | null> {
+  if (!API_KEY) return null;
+
+  const prompt: LLMMessage[] = [
+    {
+      role: 'system',
+      content: `你是小柱的会话总结助手。请用一段中文总结以下对话的关键信息，重点关注：
+1. 家长提出的问题和担忧
+2. 孩子的症状和身体状况变化
+3. 康复训练的执行情况
+4. 需要跟进的事项
+
+用2-3句话总结，不超过150字。`,
+    },
+    {
+      role: 'user',
+      content: `请总结以下与${patientName}家长的对话：\n\n${messages.map((m) => `${m.role === 'assistant' ? '小柱' : '家长'}：${m.content}`).join('\n')}`,
+    },
+  ];
+
+  try {
+    const result = await chatCompletion(prompt, { temperature: 0.3, maxTokens: 200 });
+    return { summary: result.content };
+  } catch (err) {
+    console.error('[LLM] Summary generation failed:', err);
+    return null;
+  }
+}

@@ -49,6 +49,7 @@ export interface DailyTracking {
   abnormalNotes?: string;
   mood: number; // 1-5
   sleep: number; // 1-5
+  notes?: string;
   createdAt: number;
 }
 

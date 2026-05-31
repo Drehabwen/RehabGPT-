@@ -1,50 +1,60 @@
 /**
- * Lightweight LLM Proxy Server for chatbotagent
+ * 小柱 后端服务 (XiaoZhu Backend Server)
  *
- * Provides the /api/chatbot/* endpoints that the frontend expects.
- * Proxies chat requests to DeepSeek API (or any OpenAI-compatible LLM).
+ * 提供：
+ *   LLM Proxy:  POST /api/chatbot/chat           (非流式对话)
+ *               WS   /api/chatbot/ws/chat         (流式对话)
+ *   Integration APIs — 康复师↔家长数据通道:
+ *     Family:    POST /api/integration/family/login
+ *                POST /api/integration/subject/link
+ *     Assessment:GET  /api/integration/assessment/summary/:patientId
+ *                POST /api/integration/assessment/push
+ *                GET  /api/integration/assessment/history/:patientId
+ *     Plan:      GET  /api/integration/plan/pending/:patientId
+ *                POST /api/integration/plan/push
+ *                PATCH /api/integration/plan/:planId/status
+ *     Tracking:  POST /api/integration/tracking/submit
+ *                GET  /api/integration/tracking/:patientId
+ *     Scale:     GET  /api/integration/scale/pending/:patientId
+ *                POST /api/integration/scale/push
+ *                POST /api/integration/scale/submit
+ *                GET  /api/integration/scale/results/:sessionId
  *
  * Start:  npx tsx server/index.ts
- * Port:   8001 (matches Vite proxy config in vite.config.ts)
+ * Port:   8002 (matches Vite proxy in vite.config.ts)
  */
 
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { chatCompletion, streamChatCompletion, isConfigured, type LLMMessage } from './llmClient';
+import { initDB } from './db';
+import { seedAll } from './seed';
+import {
+  parseBody,
+  sendJSON,
+  sendError,
+  handleCORS,
+} from './routes/utils';
+import { handleFamilyRoutes } from './routes/family';
+import { handleAssessmentRoutes } from './routes/assessment';
+import { handlePlanRoutes } from './routes/plan';
+import { handleTrackingRoutes } from './routes/tracking';
+import { handleScaleRoutes } from './routes/scale';
+import { handleChatRoutes } from './routes/chat';
 
-const PORT = parseInt(process.env.PORT || '8001', 10);
-
-// ── Types (mirrors frontend agentChatService.ts) ──
-
-interface ChatRequest {
-  messages: Array<{ role: string; content: string }>;
-  patientContext?: Record<string, unknown>;
-  availableTools?: string[];
-  systemPrompt?: string;
-}
-
-interface ToolCall {
-  toolId: string;
-  reason: string;
-}
-
-interface ChatResponseData {
-  type: 'text' | 'tool_call' | 'mixed';
-  content: string;
-  toolCall: ToolCall | null;
-}
+const PORT = parseInt(process.env.PORT || '8002', 10);
 
 // ── Tool detection regex ──
 
 const TOOL_CALL_RE = /\[TOOL:\s*(\w+)\]\s*(.+)?/i;
 
-function detectToolCall(text: string): ToolCall | null {
+function detectToolCall(text: string): { toolId: string; reason: string } | null {
   const match = text.match(TOOL_CALL_RE);
   if (!match) return null;
   return { toolId: match[1], reason: (match[2] || '').trim() };
 }
 
-// ── System prompt for pediatric spine assistant ──
+// ── Default system prompt ──
 
 const DEFAULT_SYSTEM_PROMPT = `你是"小柱"，一位温柔、专业的儿童脊柱康复AI助手。用温暖、阳光、通俗易懂的语言与家长沟通。
 
@@ -60,71 +70,40 @@ const DEFAULT_SYSTEM_PROMPT = `你是"小柱"，一位温柔、专业的儿童�
 3. 多用"早发现早干预"等正向语言
 4. 没有数据时如实说明`;
 
-// ── HTTP request body parsing ──
-
-function parseBody<T>(req: http.IncomingMessage): Promise<T> {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', (chunk) => (body += chunk));
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(body));
-      } catch {
-        reject(new Error('Invalid JSON'));
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
-function sendJson(res: http.ServerResponse, status: number, data: unknown): void {
-  const json = JSON.stringify(data, null, 2);
-  res.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-  });
-  res.end(json);
-}
-
 // ── HTTP Server ──
 
 const server = http.createServer(async (req, res) => {
   // CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    });
-    res.end();
-    return;
-  }
+  if (handleCORS(req, res)) return;
 
   const url = new URL(req.url || '/', `http://localhost:${PORT}`);
+  const pathname = url.pathname;
 
   try {
-    // Health check
-    if (req.method === 'GET' && url.pathname === '/api/chatbot/health') {
-      sendJson(res, 200, { llm: isConfigured() });
+    // ── Health check ──
+    if (req.method === 'GET' && pathname === '/api/chatbot/health') {
+      sendJSON(res, 200, { llm: isConfigured() });
       return;
     }
 
-    // Non-streaming chat
-    if (req.method === 'POST' && url.pathname === '/api/chatbot/chat') {
-      const body = await parseBody<ChatRequest>(req);
+    // ── Non-streaming LLM chat (kept for backward compat) ──
+    if (req.method === 'POST' && pathname === '/api/chatbot/chat') {
+      const body = await parseBody<{
+        messages: Array<{ role: string; content: string }>;
+        patientContext?: Record<string, unknown>;
+        availableTools?: string[];
+        systemPrompt?: string;
+      }>(req);
 
       if (!isConfigured()) {
-        sendJson(res, 503, { error: 'LLM not configured' });
+        sendError(res, 503, 'LLM not configured');
         return;
       }
 
       const messages: LLMMessage[] = [];
-
-      // Use client-provided system prompt or default
       const systemPrompt = body.systemPrompt || DEFAULT_SYSTEM_PROMPT;
       messages.push({ role: 'system', content: systemPrompt });
 
-      // Append conversation history
       for (const msg of body.messages) {
         messages.push({ role: msg.role as 'user' | 'assistant', content: msg.content });
       }
@@ -133,25 +112,43 @@ const server = http.createServer(async (req, res) => {
         const result = await chatCompletion(messages);
         const toolCall = detectToolCall(result.content);
 
-        const response: ChatResponseData = {
+        sendJSON(res, 200, {
           type: toolCall ? 'tool_call' : 'text',
           content: result.content,
           toolCall,
-        };
-
-        sendJson(res, 200, response);
+        });
       } catch (err) {
         console.error('[chat] LLM error:', err);
-        sendJson(res, 500, { error: 'LLM request failed' });
+        sendError(res, 500, 'LLM request failed');
       }
       return;
     }
 
-    // 404
-    sendJson(res, 404, { error: 'Not found' });
+    // ── Integration API Routes ──
+
+    // Family code routes
+    if (await handleFamilyRoutes(req, res)) return;
+
+    // Assessment routes
+    if (await handleAssessmentRoutes(req, res)) return;
+
+    // Treatment plan routes
+    if (await handlePlanRoutes(req, res)) return;
+
+    // Tracking routes
+    if (await handleTrackingRoutes(req, res)) return;
+
+    // Scale routes
+    if (await handleScaleRoutes(req, res)) return;
+
+    // Chat/History routes
+    if (await handleChatRoutes(req, res)) return;
+
+    // ── 404 ──
+    sendError(res, 404, `Not found: ${req.method} ${pathname}`);
   } catch (err) {
     console.error('[http] Error:', err);
-    sendJson(res, 500, { error: 'Internal server error' });
+    sendError(res, 500, 'Internal server error');
   }
 });
 
@@ -164,7 +161,12 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('message', async (raw) => {
     try {
-      const body: ChatRequest = JSON.parse(raw.toString());
+      const body: {
+        messages: Array<{ role: string; content: string }>;
+        patientContext?: Record<string, unknown>;
+        availableTools?: string[];
+        systemPrompt?: string;
+      } = JSON.parse(raw.toString());
 
       if (!isConfigured()) {
         ws.send(JSON.stringify({ type: 'error', content: 'LLM not configured' }));
@@ -189,13 +191,14 @@ wss.on('connection', (ws: WebSocket) => {
         }
 
         const toolCall = detectToolCall(fullContent);
-        const result: ChatResponseData = {
-          type: toolCall ? 'tool_call' : 'text',
-          content: fullContent,
-          toolCall,
-        };
-
-        ws.send(JSON.stringify({ type: 'done', result }));
+        ws.send(JSON.stringify({
+          type: 'done',
+          result: {
+            type: toolCall ? 'tool_call' : 'text',
+            content: fullContent,
+            toolCall,
+          },
+        }));
       } catch (err) {
         console.error('[ws] Stream error:', err);
         ws.send(JSON.stringify({ type: 'error', content: 'LLM stream failed' }));
@@ -216,9 +219,14 @@ wss.on('connection', (ws: WebSocket) => {
 
 // ── Start ──
 
+// Initialize database and seed data
+initDB();
+seedAll();
+
 server.listen(PORT, () => {
-  console.log(`\n🦕 小柱 LLM Proxy Server`);
-  console.log(`   HTTP:      http://localhost:${PORT}`);
-  console.log(`   WebSocket: ws://localhost:${PORT}/api/chatbot/ws/chat`);
-  console.log(`   LLM:       ${isConfigured() ? '✅ Configured' : '❌ Not configured (set DEEPSEEK_API_KEY)'}\n`);
+  console.log(`\n🦕 小柱 Backend Server`);
+  console.log(`   HTTP:       http://localhost:${PORT}`);
+  console.log(`   WebSocket:  ws://localhost:${PORT}/api/chatbot/ws/chat`);
+  console.log(`   LLM:        ${isConfigured() ? '✅ Configured' : '❌ Not configured (set DEEPSEEK_API_KEY)'}`);
+  console.log(`   APIs:       9 integration endpoints ready\n`);
 });

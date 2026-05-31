@@ -8,11 +8,11 @@ import React from 'react';
 import { Bell } from 'lucide-react';
 
 export interface ChildProfileHeaderProps {
-  childName: string;
-  childAge: string;
-  childGender: string;
+  childName?: string;
+  childAge?: string;
+  childGender?: string;
   childPhoto?: string;
-  concerns: string[];
+  concerns?: string[];
   onNotificationClick?: () => void;
   onProfileClick?: () => void;
 }
@@ -22,7 +22,7 @@ export const ChildProfileHeader: React.FC<ChildProfileHeaderProps> = ({
   childAge,
   childGender,
   childPhoto,
-  concerns,
+  concerns = [],
   onNotificationClick,
   onProfileClick,
 }) => {
@@ -46,20 +46,20 @@ export const ChildProfileHeader: React.FC<ChildProfileHeaderProps> = ({
       >
         <div className="w-8 h-8 rounded-full bg-[var(--color-primary-light)]/80 flex items-center justify-center text-[var(--color-primary)] text-xs font-extrabold border border-[var(--color-primary-border)] shadow-inner flex-shrink-0">
           {childPhoto ? (
-            <img src={childPhoto} alt={childName} className="w-full h-full rounded-full object-cover" />
+            <img src={childPhoto} alt={childName || '孩子'} className="w-full h-full rounded-full object-cover" />
           ) : (
-            childName.slice(0, 1)
+            (childName || '孩').slice(0, 1)
           )}
         </div>
         <div className="text-left min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-extrabold text-[var(--text-primary)] truncate">{childName}</span>
+            <span className="text-xs font-extrabold text-[var(--text-primary)] truncate">{childName || '孩子'}</span>
             <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--color-primary-light)] text-[var(--color-primary)] font-extrabold flex-shrink-0">
               {childGender}
             </span>
           </div>
           <p className="text-[10px] text-[var(--text-secondary)] font-medium mt-0.5 truncate">
-            {childAge} · {concerns.join(' · ')}
+            {[childAge, ...concerns].filter(Boolean).join(' · ')}
           </p>
         </div>
       </button>

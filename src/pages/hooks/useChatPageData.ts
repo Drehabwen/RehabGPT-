@@ -121,6 +121,7 @@ export function useChatPageData() {
   const sendFreeTextStream = useAgentStore((s) => s.sendFreeTextStream);
   const advanceStep = useAgentStore((s) => s.advanceStep);
   const llmAvailable = useAgentStore((s) => s.llmAvailable);
+  const llmProcessing = useAgentStore((s) => s.llmProcessing);
   const riskResult = useAgentStore((s) => s.riskResult);
   const messages = useAgentStore((s) => s.messages);
 
@@ -369,6 +370,7 @@ export function useChatPageData() {
     answers,
     // Agent
     llmAvailable,
+    llmProcessing,
     messages,
     // 打卡
     weeklyDays,
