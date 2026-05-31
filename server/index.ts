@@ -19,6 +19,12 @@
  *                POST /api/integration/scale/push
  *                POST /api/integration/scale/submit
  *                GET  /api/integration/scale/results/:sessionId
+ *   Chatbot Support APIs — 前端 Agent 辅助端点:
+ *     History:   GET  /api/chatbot/assessment-history/:name
+ *     Trend:     GET  /api/chatbot/assessment-trend/:name/:tool
+ *     Tool:      POST /api/chatbot/tool/start
+ *                POST /api/chatbot/tool/submit
+ *     Summary:   POST /api/chatbot/session-summary
  *
  * Start:  npx tsx server/index.ts
  * Port:   8002 (matches Vite proxy in vite.config.ts)
@@ -41,6 +47,7 @@ import { handlePlanRoutes } from './routes/plan';
 import { handleTrackingRoutes } from './routes/tracking';
 import { handleScaleRoutes } from './routes/scale';
 import { handleChatRoutes } from './routes/chat';
+import { handleChatbotRoutes } from './routes/chatbot';
 
 const PORT = parseInt(process.env.PORT || '8002', 10);
 
@@ -144,6 +151,9 @@ const server = http.createServer(async (req, res) => {
     // Chat/History routes
     if (await handleChatRoutes(req, res)) return;
 
+    // Chatbot tool/session routes (assessment history, trends, tool sessions, summaries)
+    if (await handleChatbotRoutes(req, res)) return;
+
     // ── 404 ──
     sendError(res, 404, `Not found: ${req.method} ${pathname}`);
   } catch (err) {
@@ -228,5 +238,5 @@ server.listen(PORT, () => {
   console.log(`   HTTP:       http://localhost:${PORT}`);
   console.log(`   WebSocket:  ws://localhost:${PORT}/api/chatbot/ws/chat`);
   console.log(`   LLM:        ${isConfigured() ? '✅ Configured' : '❌ Not configured (set DEEPSEEK_API_KEY)'}`);
-  console.log(`   APIs:       9 integration endpoints ready\n`);
+  console.log(`   APIs:       14 integration + 5 chatbot endpoints ready\n`);
 });
