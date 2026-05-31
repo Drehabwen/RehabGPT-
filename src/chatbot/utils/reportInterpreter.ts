@@ -1,9 +1,8 @@
 /**
- * 报告解读 — LLM API（DeepSeek）+ 规则引擎兜底
+ * 报告解读 — 规则引擎
  *
- * 前端调用后端 POST /api/chatbot/interpret-report，
- * 后端使用 DeepSeek 客户端生成自然语言解读。
- * 前端在 API 不可用时降级为规则引擎。
+ * 根据评估数据类型（体态/ROM/量表/筛查/综合），
+ * 生成结构化的中文自然语言解读。
  */
 
 // ── 请求/响应类型 ──
@@ -19,38 +18,7 @@ export interface InterpretResponse {
   source: 'llm' | 'rule_engine';
 }
 
-// ── API 配置 ──
-const API_BASE = '';
-const API_TIMEOUT = 30000; // 30 秒超时
-
-/**
- * 调用后端 LLM API 解读评估数据
- */
-async function callInterpretAPI(req: InterpretRequest): Promise<string | null> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-
-    const response = await fetch(`${API_BASE}/api/chatbot/interpret-report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    return data.interpretation || null;
-  } catch (err) {
-    console.warn('[ReportInterpreter] LLM API call failed:', err);
-    return null;
-  }
-}
-
-// ── 规则引擎降级 ──
+// ── 规则引擎 ──
 
 function fallbackPostureInterpretation(data: Record<string, unknown>): string {
   const metrics = (data.metrics || data) as Record<string, number>;
@@ -234,11 +202,11 @@ function fallbackOverviewInterpretation(
 }
 
 /**
- * 主入口：解读评估数据（LLM 优先，降级规则引擎）
+ * 主入口：解读评估数据（规则引擎）
  */
 export async function interpretAssessmentData(
-  patientName: string,
-  patientAge: number | null,
+  _patientName: string,
+  _patientAge: number | null,
   dataType: InterpretRequest['dataType'],
   data: Record<string, unknown>,
   /** 综合解读时提供额外数据 */
@@ -249,35 +217,25 @@ export async function interpretAssessmentData(
     screeningData?: Record<string, unknown>;
   },
 ): Promise<InterpretResponse> {
-  // 1. 尝试 LLM API
-  const llmResult = await callInterpretAPI({
-    patientName,
-    patientAge,
-    dataType,
-    data,
-  });
+  void _patientName;
+  void _patientAge;
 
-  if (llmResult) {
-    return { interpretation: llmResult, source: 'llm' };
-  }
-
-  // 2. 降级规则引擎
-  let fallbackText: string;
+  let text: string;
   switch (dataType) {
     case 'posture':
-      fallbackText = fallbackPostureInterpretation(data);
+      text = fallbackPostureInterpretation(data);
       break;
     case 'rom':
-      fallbackText = fallbackRomInterpretation(data);
+      text = fallbackRomInterpretation(data);
       break;
     case 'scales':
-      fallbackText = fallbackScalesInterpretation(data);
+      text = fallbackScalesInterpretation(data);
       break;
     case 'screening':
-      fallbackText = fallbackScreeningInterpretation(data);
+      text = fallbackScreeningInterpretation(data);
       break;
     case 'overview':
-      fallbackText = fallbackOverviewInterpretation(
+      text = fallbackOverviewInterpretation(
         extraData?.postureData,
         extraData?.romData,
         extraData?.scalesData,
@@ -285,8 +243,8 @@ export async function interpretAssessmentData(
       );
       break;
     default:
-      fallbackText = '暂不支持该类型的数据解读。';
+      text = '暂不支持该类型的数据解读。';
   }
 
-  return { interpretation: fallbackText, source: 'rule_engine' };
+  return { interpretation: text, source: 'rule_engine' };
 }
