@@ -8,7 +8,6 @@ import type { AgentToolId } from '../store/useAgentStore';
 // ── API 配置 ──
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 const WS_BASE = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
-const CHAT_TIMEOUT = 15000; // 15 秒（对话需要更快响应）
 const API_TIMEOUT = 30000; // 30 秒（工具/数据操作）
 const HEALTH_TIMEOUT = 5000; // 5 秒
 
@@ -182,43 +181,6 @@ export async function checkLLMAvailable(): Promise<boolean> {
     return data.llm === true;
   } catch {
     return false;
-  }
-}
-
-// ── 对话（HTTP POST） ──
-
-export async function sendChatMessage(req: ChatRequest): Promise<ChatResponse | null> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), CHAT_TIMEOUT);
-
-    const response = await fetch(`${API_BASE}/api/chatbot/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      consecutiveFailures++;
-      console.warn(`[AgentChat] API returned ${response.status}`);
-      return null;
-    }
-
-    const data = await response.json();
-    consecutiveFailures = 0;
-
-    return {
-      type: data.type || 'text',
-      content: data.content || '',
-      toolCall: data.toolCall || null,
-    };
-  } catch (err) {
-    consecutiveFailures++;
-    console.warn('[AgentChat] LLM API call failed:', err);
-    return null;
   }
 }
 

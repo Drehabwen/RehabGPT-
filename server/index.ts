@@ -2,8 +2,7 @@
  * 小柱 后端服务 (XiaoZhu Backend Server)
  *
  * 提供：
- *   LLM Proxy:  POST /api/chatbot/chat           (非流式对话)
- *               WS   /api/chatbot/ws/chat         (流式对话)
+ *   LLM Proxy:  WS   /api/chatbot/ws/chat         (流式对话，前端唯一对话通道)
  *   Integration APIs — 康复师↔家长数据通道:
  *     Family:    POST /api/integration/family/login
  *                POST /api/integration/subject/link
@@ -32,7 +31,7 @@
 
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { chatCompletion, streamChatCompletion, isConfigured, type LLMMessage } from './llmClient';
+import { streamChatCompletion, isConfigured, type LLMMessage } from './llmClient';
 import { initDB } from './db';
 import { seedAll } from './seed';
 import {
@@ -90,44 +89,6 @@ const server = http.createServer(async (req, res) => {
     // ── Health check ──
     if (req.method === 'GET' && pathname === '/api/chatbot/health') {
       sendJSON(res, 200, { llm: isConfigured() });
-      return;
-    }
-
-    // ── Non-streaming LLM chat (kept for backward compat) ──
-    if (req.method === 'POST' && pathname === '/api/chatbot/chat') {
-      const body = await parseBody<{
-        messages: Array<{ role: string; content: string }>;
-        patientContext?: Record<string, unknown>;
-        availableTools?: string[];
-        systemPrompt?: string;
-      }>(req);
-
-      if (!isConfigured()) {
-        sendError(res, 503, 'LLM not configured');
-        return;
-      }
-
-      const messages: LLMMessage[] = [];
-      const systemPrompt = body.systemPrompt || DEFAULT_SYSTEM_PROMPT;
-      messages.push({ role: 'system', content: systemPrompt });
-
-      for (const msg of body.messages) {
-        messages.push({ role: msg.role as 'user' | 'assistant', content: msg.content });
-      }
-
-      try {
-        const result = await chatCompletion(messages);
-        const toolCall = detectToolCall(result.content);
-
-        sendJSON(res, 200, {
-          type: toolCall ? 'tool_call' : 'text',
-          content: result.content,
-          toolCall,
-        });
-      } catch (err) {
-        console.error('[chat] LLM error:', err);
-        sendError(res, 500, 'LLM request failed');
-      }
       return;
     }
 

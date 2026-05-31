@@ -10,7 +10,6 @@ import { nanoid } from 'nanoid';
 import type { ChatMessage } from '../types';
 import type { AgentState, AgentToolId } from './agentTypes';
 import {
-  sendChatMessage,
   sendChatMessageStream,
   checkLLMAvailable,
   shouldFallback,
@@ -157,7 +156,6 @@ async function consolidateSessionIfNewDay(
 export interface AgentLLMSlice {
   checkLLMStatus: () => Promise<boolean>;
   resetLLMStatus: () => void;
-  sendFreeText: (text: string) => Promise<void>;
   sendFreeTextStream: (text: string) => Promise<void>;
   executeToolFromLLM: (toolId: string, reason?: string) => void;
 }
@@ -178,119 +176,6 @@ export function createAgentLLMSlice(
       resetFailureCount();
       set({ llmAvailable: true, llmProcessing: false });
       console.log('[AgentStore] LLM status reset');
-    },
-
-    // ── 发送自由文本到 LLM（HTTP） ──
-    sendFreeText: async (text) => {
-      await consolidateSessionIfNewDay(
-        get().messages,
-        get().patientName,
-        get().lastAssessmentSummary,
-        set,
-      );
-
-      const state = get();
-      const { patientName, patientAge, hasDueReminder } = state;
-
-      if (shouldFallback()) {
-        set({ llmAvailable: false });
-      }
-
-      if (!state.llmAvailable) {
-        get().advanceStep(text);
-        return;
-      }
-
-      const userMsg: ChatMessage = {
-        id: nanoid(8),
-        role: 'user',
-        text,
-        timestamp: Date.now(),
-      };
-      set((s) => ({
-        messages: [...s.messages, userMsg],
-        llmProcessing: true,
-      }));
-
-      // Phase B: 新上下文工程 — 意图路由 + 动态注入
-      const childCtx = useChildContextStore.getState().context;
-      const intent = classifyIntent(text);
-      const systemPrompt = buildDynamicSystemPrompt(intent.primary, childCtx);
-      const userMessage = buildContextUserMessage(text, intent.primary);
-
-      // Token 感知的消息构建
-      const llmMessages = buildLLMMessages(
-        systemPrompt,
-        state.messages,
-        userMessage,
-      );
-
-      // 调试：记录 token 使用情况
-      const systemTokens = countTokens(systemPrompt);
-      const totalInputTokens = llmMessages.reduce((sum, m) => sum + countTokens(m.content), 0);
-      console.log(`[LLM] Intent: ${intent.primary}(${Math.round(intent.confidence * 100)}%) | System: ${systemTokens}t | Total: ${totalInputTokens}t`);
-
-      const patientContext: PatientContext = {
-        name: patientName || '孩子',
-        age: patientAge,
-        hasHistory: state.hasHistory,
-        hasDueReminder,
-        riskLevel: state.riskResult?.level ?? null,
-        lastAssessmentSummary: state.lastAssessmentSummary,
-      };
-
-      try {
-        const response = await sendChatMessage({
-          messages: llmMessages,
-          patientContext,
-          availableTools: state.suggestedTools,
-          systemPrompt,
-        });
-
-        if (!response || shouldFallback()) {
-          if (shouldFallback()) set({ llmAvailable: false });
-          set((s) => ({
-            llmProcessing: false,
-            messages: [
-              ...s.messages,
-              {
-                id: nanoid(8),
-                role: 'bot',
-                text: '小柱暂时无法连接，让我用另一种方式帮您。',
-                timestamp: Date.now(),
-              },
-            ],
-          }));
-          get().advanceStep(text);
-          return;
-        }
-
-        resetFailureCount();
-
-        const replyText = response.content;
-
-        set((s) => ({
-          llmProcessing: false,
-          messages: [
-            ...s.messages,
-            {
-              id: nanoid(8),
-              role: 'bot',
-              text: replyText,
-              timestamp: Date.now(),
-              ...(response.toolCall ? { toolCall: response.toolCall } : {}),
-            },
-          ],
-        }));
-
-        // Phase C: 异步要点提取（不阻塞对话）
-        if (shouldExtract(text, replyText)) {
-          scheduleExtraction(text, replyText, childCtx);
-        }
-      } catch {
-        set({ llmProcessing: false });
-        get().advanceStep(text);
-      }
     },
 
     // ── 发送自由文本到 LLM（WebSocket 流式） ──

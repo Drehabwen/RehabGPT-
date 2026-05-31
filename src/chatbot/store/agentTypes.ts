@@ -75,7 +75,6 @@ export interface AgentState {
   // Actions — LLM conversation
   checkLLMStatus: () => Promise<boolean>;
   resetLLMStatus: () => void;
-  sendFreeText: (text: string) => Promise<void>;
   sendFreeTextStream: (text: string) => Promise<void>;
   executeToolFromLLM: (toolId: string, reason?: string) => void;
 

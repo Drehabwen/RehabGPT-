@@ -5,7 +5,7 @@
  * 不阻塞对话回复，失败静默降级。
  *
  * 调用链：
- * agentLLMSlice.sendFreeText → 回复家长 → scheduleExtraction（异步）
+ * agentLLMSlice.sendFreeTextStream → 回复家长 → scheduleExtraction（异步）
  *   → extractionService.extract → useChildContextStore.applyExtractionResult
  */
 
