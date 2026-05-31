@@ -60,7 +60,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
         {/* 康复评估量表卡片 */}
         {isBot && message.scalePayload && (
-          <div className="mt-3.5 w-full min-w-[280px] min-w-[280px] sm:min-w-[320px] md:min-w-[360px]">
+          <div className="mt-3.5 w-full min-w-[280px] sm:min-w-[320px] md:min-w-[360px]">
             <ScaleInteractionCard
               taskId={message.scalePayload.taskId}
               sessionId={message.scalePayload.sessionId}

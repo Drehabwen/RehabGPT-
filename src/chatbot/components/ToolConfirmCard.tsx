@@ -5,7 +5,7 @@
  * 防止 LLM 误判导致用户被迫进入不相关的工具界面。
  */
 import React from 'react';
-import { Activity, Layers, ClipboardCheck, Camera, Heart } from 'lucide-react';
+import { Activity, Layers, ClipboardCheck, Heart } from 'lucide-react';
 
 interface ToolConfirmCardProps {
   toolId: string;
@@ -22,8 +22,6 @@ const TOOL_META: Record<string, { name: string; icon: React.ComponentType<any> }
   invoke_rom: { name: '关节活动度', icon: Layers },
   scales: { name: '功能评估', icon: ClipboardCheck },
   invoke_scales: { name: '功能评估', icon: ClipboardCheck },
-  adams_camera: { name: "Adam's 前屈测试", icon: Camera },
-  invoke_adams_camera: { name: "Adam's 前屈测试", icon: Camera },
   psych: { name: '心理筛查', icon: Heart },
   invoke_psych: { name: '心理筛查', icon: Heart },
 };
