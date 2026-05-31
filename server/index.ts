@@ -5,7 +5,6 @@
  *   LLM Proxy:  WS   /api/chatbot/ws/chat         (流式对话，前端唯一对话通道)
  *   Integration APIs — 康复师↔家长数据通道:
  *     Family:    POST /api/integration/family/login
- *                POST /api/integration/subject/link
  *     Assessment:GET  /api/integration/assessment/summary/:patientId
  *                POST /api/integration/assessment/push
  *                GET  /api/integration/assessment/history/:patientId

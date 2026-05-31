@@ -173,9 +173,6 @@ VITE_DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
 
 # 后端 API 地址（如使用独立后端）
 VITE_API_BASE=http://localhost:8000
-
-# 可选：启用旧版患者绑定接口
-VITE_ENABLE_LEGACY_SUBJECT_LINK=false
 ```
 
 ### 启动项目
@@ -461,7 +458,6 @@ Create `.env`:
 VITE_DEEPSEEK_API_KEY=your_api_key_here
 VITE_DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
 VITE_API_BASE=http://localhost:8000
-VITE_ENABLE_LEGACY_SUBJECT_LINK=false
 ```
 
 ### Start

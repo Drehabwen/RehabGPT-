@@ -101,19 +101,6 @@ export const LoginPage: React.FC = () => {
       },
     });
 
-    // Phase 3: 记录家庭码绑定（静默，不影响登录流程）
-    const apiBase = import.meta.env.VITE_API_BASE || '';
-    if (import.meta.env.VITE_ENABLE_LEGACY_SUBJECT_LINK === 'true') fetch(`${apiBase}/api/integration/subject/link`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subject_id: patient_id,
-        family_code: code,
-      }),
-    }).catch((err) => {
-      console.warn('[LoginPage] Family link sync failed (non-blocking):', err);
-    });
-
     navigate('/chat');
   };
 
