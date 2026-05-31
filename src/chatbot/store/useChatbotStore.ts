@@ -11,14 +11,27 @@ import { useAgentStore } from './useAgentStore';
  */
 
 // ── Store 状态 ──
+interface PatientMeta {
+  age?: number | null;
+  sex?: 'male' | 'female' | string | null;
+  sessionId?: string | null;
+  answers?: Answers;
+}
+
 interface ChatbotState {
   patientId: string;
   patientName: string;
   answers: Answers;
   riskResult: RiskResult | null;
 
-  setPatient: (id: string, name: string) => void;
+  setPatient: (id: string, name: string, meta?: PatientMeta) => void;
   resetFlow: () => void;
+}
+
+function toGenderLabel(sex?: string | null): '男' | '女' | undefined {
+  if (sex === 'male' || sex === '男') return '男';
+  if (sex === 'female' || sex === '女') return '女';
+  return undefined;
 }
 
 export const useChatbotStore = create<ChatbotState>()(
@@ -31,19 +44,25 @@ export const useChatbotStore = create<ChatbotState>()(
       riskResult: null,
 
       // ── 设置患者 ──
-      setPatient: (id, name) => {
+      setPatient: (id, name, meta) => {
         // 先重置对话引擎核心状态（将 view 重置回 'chat'、清空旧消息与状态锁），规避摄像头残留与账号越界 Bug
         useAgentStore.getState().resetAgent();
+        const gender = toGenderLabel(meta?.sex);
 
         set({
           patientId: id,
           patientName: name,
-          answers: {},
+          answers: {
+            ...(meta?.answers || {}),
+            ...(meta?.age != null ? { age: meta.age } : {}),
+            ...(gender ? { gender } : {}),
+            ...(meta?.sessionId ? { screening_session_id: meta.sessionId } : {}),
+          },
           riskResult: null,
         });
 
         // 启动全新的对话生命周期初始化
-        useAgentStore.getState().initWithPatient(id, name);
+        useAgentStore.getState().initWithPatient(id, name, meta?.age ?? null, meta?.sex, meta?.sessionId);
       },
 
       // ── 重置流程 ──

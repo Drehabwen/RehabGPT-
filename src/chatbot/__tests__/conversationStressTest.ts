@@ -276,7 +276,7 @@ describe('Chatbot Flow Completeness Tests', () => {
 // =============================================================================
 
 describe('Agent Branch Flow Tests', () => {
-  const branches: BranchId[] = ['main', 'reassess', 'report', 'rehab', 'followup'];
+  const branches: BranchId[] = ['main', 'report', 'rehab', 'followup'];
 
   it('所有分支应定义流程', () => {
     for (const branch of branches) {
@@ -292,12 +292,14 @@ describe('Agent Branch Flow Tests', () => {
     expect(mainFlow[0].type).toBe('bot_message');
   });
 
-  it('reassess 分支应包含核心筛查步骤', () => {
-    const reassessIds = BRANCH_FLOWS.reassess.map((s) => s.id);
-    expect(reassessIds).toContain('growth_spurt');
-    expect(reassessIds).toContain('family_scoliosis');
-    expect(reassessIds).toContain('posture_shoulders');
-    expect(reassessIds).toContain('results');
+  it('report 和 rehab 分支应包含核心闭环步骤', () => {
+    const reportIds = BRANCH_FLOWS.report.map((s) => s.id);
+    expect(reportIds).toContain('report_select');
+    expect(reportIds).toContain('report_interpretation');
+
+    const rehabIds = BRANCH_FLOWS.rehab.map((s) => s.id);
+    expect(rehabIds).toContain('rehab_intro');
+    expect(rehabIds).toContain('rehab_detail');
   });
 
   it('report 分支应有数据解读子选项', () => {
@@ -620,13 +622,13 @@ describe('Conversation Simulator', () => {
     const answers: Answers = {};
 
     // 模拟主菜单选择
-    const targetBranch: BranchId = 'reassess';
+    const targetBranch: BranchId = 'report';
     branchHistory.push(targetBranch);
 
     const flow = BRANCH_FLOWS[targetBranch];
     expect(flow).toBeDefined();
 
-    // 模拟reassess流程
+    // 模拟report流程
     for (const step of flow) {
       if (step.skipCondition?.(answers)) continue;
 
@@ -637,7 +639,7 @@ describe('Conversation Simulator', () => {
     }
 
     expect(branchHistory).toContain('main');
-    expect(branchHistory).toContain('reassess');
+    expect(branchHistory).toContain('report');
   });
 });
 

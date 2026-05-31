@@ -9,14 +9,16 @@ export type {
   IntentResult,
   RehabStage,
   ExtractionResult,
-} from './types';
-export { DEFAULT_CHILD_CONTEXT } from './types';
+} from './model/types';
+export { DEFAULT_CHILD_CONTEXT } from './model/types';
+export { RISK_LEVEL_MAP, mapRiskLevel } from './model/risk';
+export type { ContextSnapshot, ContextAssembly } from './engine/contextSnapshot';
 
 // Store
-export { useChildContextStore } from './ChildContextStore';
+export { useChildContextStore } from './store/ChildContextStore';
 
 // Hook
-export { useChildContext } from './useChildContext';
+export { useChildContext } from './store/useChildContext';
 
 // Pure functions
 export {
@@ -24,7 +26,7 @@ export {
   recalculateFlags,
   applyExtraction,
   consolidateMemoryForNewDay,
-} from './updateRules';
+} from './engine/updateRules';
 
 // Intent router
 export {
@@ -32,16 +34,30 @@ export {
   shouldExtract,
   buildClassifyIntentPrompt,
   parseClassifyIntentResponse,
-} from './intentRouter';
+} from './memory/intentRouter';
 
 // Injection engine
 export {
   buildDynamicSystemPrompt,
   buildUserMessage,
-} from './injectionEngine';
+} from './engine/injectionEngine';
 
 // Extraction service
 export {
   extractConversationPoints,
   scheduleExtraction,
-} from './extractionService';
+} from './memory/extractionService';
+
+// Context assembler
+export {
+  assembleFreeChatContext,
+  assembleDailyAdviceContext,
+  buildDailyAdviceSystemPrompt,
+} from './engine/contextAssembler';
+
+// Ingest helpers
+export {
+  mapAssessmentSummaryToContext,
+  mapTreatmentPlanToContext,
+} from './ingest/clinicalIngest';
+export { mapPendingScalesToContext } from './ingest/taskIngest';

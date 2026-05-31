@@ -71,8 +71,6 @@ const KNOWLEDGE_MODULES: Record<string, KnowledgeModule> = {
 export function getKnowledgeModulesForPhase(phase: string): string[] {
   const phaseMap: Record<string, string[]> = {
     greeting: ['core'],
-    screening: ['core', 'adams'],
-    adams_test: ['core', 'adams'],
     result_review: ['core'],
     report_chat: ['core', 'scales'],
     rehab_guidance: ['core', 'rehab'],

@@ -5,19 +5,11 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getLatest } from '../../services/assessmentService';
+import { isAbortError } from '../../services/apiClient';
+import type { AssessmentSummary } from '../../services/types';
 
-export interface AssessmentSummary {
-  summary_id: string;
-  patient_id: string;
-  patient_name: string | null;
-  session_id: string;
-  risk_level: string;
-  risk_label: string;
-  summary_text: string;
-  concerns: string[];
-  recommendations: string[];
-  created_at: string;
-}
+export type { AssessmentSummary };
 
 interface UseAssessmentSummaryResult {
   assessment: AssessmentSummary | null;
@@ -46,23 +38,10 @@ export function useAssessmentSummary(patientId: string | null): UseAssessmentSum
     setError(null);
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || '';
-      const resp = await fetch(`${apiBase}/api/integration/assessment/summary/${encodeURIComponent(patientId)}`, {
-        signal: controller.signal,
-      });
-
-      if (!resp.ok) {
-        if (resp.status === 404) {
-          setAssessment(null);
-          return;
-        }
-        throw new Error(`HTTP ${resp.status}`);
-      }
-
-      const data: AssessmentSummary | null = await resp.json();
-      setAssessment(data);  // null means no assessment yet
+      const data = await getLatest(patientId, controller.signal);
+      setAssessment(data);
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (isAbortError(err)) return;
       console.warn('[useAssessmentSummary] Fetch failed:', err);
       setError(err instanceof Error ? err.message : '加载失败');
     } finally {

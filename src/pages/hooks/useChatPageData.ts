@@ -10,12 +10,15 @@ import { useNavigate } from 'react-router-dom';
 import { useChatbotStore } from '../../chatbot/store/useChatbotStore';
 import { useAgentStore } from '../../chatbot/store/useAgentStore';
 import { useTrackingStore } from '../../tracking/store/useTrackingStore';
-import type { TrackingSummary } from '../../tracking/types';
 import { useAssessmentSummary } from './useAssessmentSummary';
 import { useTreatmentPlan } from './useTreatmentPlan';
-import { RISK_LEVEL_MAP } from '../../context/ChildContextStore';
-// Phase D: 结构化上下文同步
-import { useChildContextStore } from '../../context/ChildContextStore';
+import {
+  assembleDailyAdviceContext,
+  mapAssessmentSummaryToContext,
+  mapRiskLevel,
+  mapTreatmentPlanToContext,
+  useChildContextStore,
+} from '../../context';
 
 // ── Advice 解析：从 LLM 响应中提取建议和小贴士 ──
 
@@ -37,74 +40,6 @@ function parseAdviceResponse(content: string): { advice: string; tips: string[] 
     advice: advice || content.trim().slice(0, 200),
     tips: tips.length > 0 ? tips.slice(0, 3) : [],
   };
-}
-
-// ── Advice prompt 构建 ──
-
-interface AdviceContext {
-  patientName: string;
-  patientAge: number | null;
-  gender?: string;
-  hasScreening: boolean;
-  riskLabel?: string;
-  riskLevel?: string;
-  concerns: string[];
-  trackingSummary: TrackingSummary | null;
-}
-
-function buildAdviceSystemPrompt(ctx: AdviceContext): string {
-  const parts: string[] = [];
-
-  // 人设
-  parts.push(
-    '你是小柱 🦕，一位温暖专业的儿童脊柱健康陪伴教练。你的语气亲切、鼓励、像家人。',
-  );
-
-  // 患者上下文
-  const profileParts: string[] = [];
-  profileParts.push(`${ctx.patientName || '孩子'}`);
-  if (ctx.patientAge) profileParts.push(`${ctx.patientAge}岁`);
-  if (ctx.gender) profileParts.push(ctx.gender === 'male' ? '男孩' : '女孩');
-  parts.push(`\n孩子信息：${profileParts.join('，')}`);
-
-  // 筛查结果
-  if (ctx.hasScreening && ctx.riskLabel) {
-    parts.push(`\n最近筛查：${ctx.riskLabel}（${ctx.riskLevel || '未知'}风险）`);
-    if (ctx.concerns.length > 0) {
-      parts.push(`关注点：${ctx.concerns.join('、')}`);
-    }
-  } else {
-    parts.push('\n最近筛查：尚未完成姿态初筛');
-  }
-
-  // 追踪数据
-  if (ctx.trackingSummary) {
-    const ts = ctx.trackingSummary;
-    const lines: string[] = [];
-    if (ts.adherence) {
-      lines.push(`近7天运动完成率 ${ts.adherence.exercise}%`);
-      if (ts.adherence.brace > 0) lines.push(`支具佩戴率 ${ts.adherence.brace}%`);
-    }
-    if (ts.abnormalCount > 0) lines.push(`异常症状 ${ts.abnormalCount} 天`);
-    if (ts.alerts && ts.alerts.length > 0) {
-      lines.push(`活跃预警：${ts.alerts.map((a) => a.message).join('；')}`);
-    }
-    if (lines.length > 0) parts.push(`\n近期追踪数据：\n${lines.join('\n')}`);
-  }
-
-  // 输出格式
-  parts.push(
-    `\n请根据以上信息，生成今天的个性化建议。用以下格式回复（严格遵循）：`,
-    `【建议】`,
-    `用1-2句话给出温暖、具体的今日行动建议`,
-    `【小贴士】`,
-    `- 小贴士1（具体可执行）`,
-    `- 小贴士2（具体可执行）`,
-    `- 小贴士3（具体可执行）`,
-    `\n要求：建议要针对孩子的具体情况，不要泛泛而谈。语气温暖亲切。每条小贴士不超过20字。`,
-  );
-
-  return parts.join('\n');
 }
 
 // ── Hook ──
@@ -133,14 +68,7 @@ export function useChatPageData() {
   // Phase D: 同步 API 数据到 ChildContext
   useEffect(() => {
     if (assessment) {
-      useChildContextStore.getState().setAssessment({
-        riskLevel: RISK_LEVEL_MAP[assessment.risk_level] || 'none',
-        riskLabel: assessment.risk_label || '评估完成',
-        summaryText: assessment.summary_text || '',
-        concerns: assessment.concerns || [],
-        recommendations: assessment.recommendations || [],
-        assessedAt: assessment.created_at,
-      });
+      useChildContextStore.getState().setAssessment(mapAssessmentSummaryToContext(assessment));
     } else if (!assessmentLoading) {
       // API 返回空（无评估）→ 保持 null
       useChildContextStore.getState().setAssessment(null);
@@ -149,22 +77,7 @@ export function useChatPageData() {
 
   useEffect(() => {
     if (latestPlan) {
-      const actionMatches = latestPlan.plan_content.match(/[-*]\s*(.+?)(?:\n|$)/g) || [];
-      const keyActions = actionMatches.slice(0, 5).map((line) => {
-        const cleaned = line.replace(/^[-*]\s*/, '').trim();
-        const parts = cleaned.split(/[，,]\s*/);
-        return { name: parts[0] || cleaned.slice(0, 30), sets: parts[1] || '', note: parts[2] || '' };
-      });
-      const firstLine = latestPlan.plan_content.split('\n')[0]?.replace(/^#+\s*/, '') || '康复训练计划';
-      useChildContextStore.getState().setTreatment({
-        planId: latestPlan.plan_id,
-        therapistName: latestPlan.therapist_name || '康复师',
-        title: firstLine.slice(0, 40),
-        summaryText: latestPlan.plan_content.slice(0, 200),
-        keyActions,
-        durationWeeks: 4,
-        createdAt: latestPlan.created_at,
-      });
+      useChildContextStore.getState().setTreatment(mapTreatmentPlanToContext(latestPlan));
     } else if (!planLoading) {
       useChildContextStore.getState().setTreatment(null);
     }
@@ -173,7 +86,6 @@ export function useChatPageData() {
   // ── 本周打卡（从 tracking store 获取，useMemo 避免 selector 新引用重渲染） ──
   const dailyRecords = useTrackingStore((s) => s.dailyRecords);
   const getWeekCompletion = useTrackingStore((s) => s.getWeekCompletion);
-  const getSummary = useTrackingStore((s) => s.getSummary);
   const weeklyDays = useMemo(
     () => getWeekCompletion(),
     [dailyRecords, getWeekCompletion],
@@ -186,7 +98,7 @@ export function useChatPageData() {
       return {
         isEmpty: false as const,
         date: assessment.created_at?.split('T')[0] || '最近',
-        riskLevel: RISK_LEVEL_MAP[assessment.risk_level] || 'none',
+        riskLevel: mapRiskLevel(assessment.risk_level),
         riskLabel: assessment.risk_label || '评估完成',
         recommendation: assessment.summary_text,
         concerns: assessment.concerns || [],
@@ -248,19 +160,9 @@ export function useChatPageData() {
     setAdviceLoading(true);
 
     try {
-      const summary = getSummary(7);
-      const ctx: AdviceContext = {
-        patientName: patientName || '孩子',
-        patientAge,
-        gender: answers.gender as string | undefined,
-        hasScreening: !finalScreeningData.isEmpty,
-        riskLabel: riskResult?.levelLabel,
-        riskLevel: riskResult?.level,
-        concerns: finalScreeningData.concerns || [],
-        trackingSummary: summary,
-      };
-
-      const systemPrompt = buildAdviceSystemPrompt(ctx);
+      const { snapshot, systemPrompt } = assembleDailyAdviceContext(
+        useChildContextStore.getState().context,
+      );
 
       const resp = await fetch('/api/chatbot/chat', {
         method: 'POST',
@@ -268,12 +170,12 @@ export function useChatPageData() {
         body: JSON.stringify({
           messages: [{ role: 'user', content: '请给我今天的个性化建议' }],
           patientContext: {
-            name: patientName || '孩子',
-            age: patientAge,
+            name: snapshot.identity.displayName,
+            age: snapshot.identity.age,
             hasHistory: false,
             hasDueReminder: false,
-            riskLevel: riskResult?.level ?? null,
-            lastAssessmentSummary: null,
+            riskLevel: snapshot.clinical.assessment?.riskLevel ?? null,
+            lastAssessmentSummary: snapshot.clinical.assessment?.summaryText ?? null,
           },
           systemPrompt,
         }),
@@ -298,7 +200,7 @@ export function useChatPageData() {
         setAdviceLoading(false);
       }
     }
-  }, [llmAvailable, patientName, patientAge, answers.gender, riskKey, finalScreeningData.isEmpty, finalScreeningData.concerns, riskResult, getSummary]);
+  }, [llmAvailable, patientName, patientAge, answers.gender, riskKey, finalScreeningData.isEmpty, finalScreeningData.concerns, riskResult, latestPlan?.plan_id]);
 
   // 触发 advice 生成
   useEffect(() => {

@@ -292,7 +292,7 @@ export async function runStressTests(): Promise<StressTestReport> {
   console.log('-'.repeat(50));
 
   await runner.test('所有分支应定义流程', () => {
-    const branches: BranchId[] = ['main', 'reassess', 'report', 'rehab', 'followup'];
+    const branches: BranchId[] = ['main', 'report', 'rehab', 'followup'];
     for (const branch of branches) {
       const flow = BRANCH_FLOWS[branch];
       if (!flow || flow.length === 0) {
@@ -306,13 +306,14 @@ export async function runStressTests(): Promise<StressTestReport> {
     expect(mainFlow[0].id).toBe('welcome');
   });
 
-  await runner.test('reassess分支应包含核心筛查步骤', () => {
-    const reassessIds = BRANCH_FLOWS.reassess.map((s) => s.id);
-    if (!reassessIds.includes('growth_spurt')) {
-      throw new Error('缺少growth_spurt步骤');
+  await runner.test('report和rehab分支应包含核心闭环步骤', () => {
+    const reportIds = BRANCH_FLOWS.report.map((s) => s.id);
+    if (!reportIds.includes('report_select')) {
+      throw new Error('缺少report_select步骤');
     }
-    if (!reassessIds.includes('results')) {
-      throw new Error('缺少results步骤');
+    const rehabIds = BRANCH_FLOWS.rehab.map((s) => s.id);
+    if (!rehabIds.includes('rehab_detail')) {
+      throw new Error('缺少rehab_detail步骤');
     }
   });
 

@@ -4,7 +4,7 @@
  * 全部是同步纯函数，不依赖任何外部状态或网络。
  */
 
-import type { ChildContext, RehabStage, ExtractionResult } from './types';
+import type { ChildContext, RehabStage, ExtractionResult } from '../model/types';
 
 // ── RehabStage 状态机推导 ──
 
@@ -30,17 +30,17 @@ export function deriveStage(ctx: ChildContext): RehabStage {
     ? new Date(ctx.treatment.expiresAt) < new Date()
     : false;
 
+  // 简化完成判断：处方过期 + 高完成率 = 完成
+  if (isExpired && ctx.progress.complianceRate >= 90) {
+    return 'completed';
+  }
+
   if (isExpired && ctx.progress.complianceRate >= 80) {
     return 'awaiting_review';
   }
 
   if (ctx.flags.needsReassessment && ctx.progress.complianceRate >= 80) {
     return 'awaiting_review';
-  }
-
-  // 简化完成判断：处方过期 + 高完成率 = 完成
-  if (isExpired && ctx.progress.complianceRate >= 90) {
-    return 'completed';
   }
 
   return 'in_training';

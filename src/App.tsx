@@ -21,7 +21,11 @@ function App() {
   useEffect(() => {
     const agentState = useAgentStore.getState();
     if (agentState.patientId && !patientId) {
-      useChatbotStore.getState().setPatient(agentState.patientId, agentState.patientName);
+      useChatbotStore.getState().setPatient(agentState.patientId, agentState.patientName, {
+        age: agentState.patientAge,
+        sex: agentState.patientSex,
+        sessionId: agentState.patientSessionId,
+      });
     }
   }, []);
 

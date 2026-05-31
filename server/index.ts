@@ -28,23 +28,18 @@
  * Port:   8002 (matches Vite proxy in vite.config.ts)
  */
 
+import 'dotenv/config';
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { streamChatCompletion, isConfigured, type LLMMessage } from './llmClient';
 import { initDB } from './db';
-import { seedAll } from './seed';
 import {
-  parseBody,
   sendJSON,
   sendError,
   handleCORS,
 } from './routes/utils';
-import { handleFamilyRoutes } from './routes/family';
-import { handleAssessmentRoutes } from './routes/assessment';
-import { handlePlanRoutes } from './routes/plan';
-import { handleTrackingRoutes } from './routes/tracking';
-import { handleScaleRoutes } from './routes/scale';
-import { handleChatRoutes } from './routes/chat';
+// Phase 5: 所有 CRUD 数据路由已迁移到 Rehab Python (:8000)
+// Node 仅保留 chatbot 支持路由 + WebSocket LLM 流式对话
 import { handleChatbotRoutes } from './routes/chatbot';
 
 const PORT = parseInt(process.env.PORT || '8002', 10);
@@ -91,27 +86,10 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // ── Integration API Routes ──
+    // ── Chatbot support routes (assessment history, trends, tool sessions, summaries) ──
+    // Phase 5: 所有 /api/integration/* CRUD 路由已迁移到 Rehab Python (:8000)
+    // chatbot 路由内部通过 HTTP 调用 Python 获取数据
 
-    // Family code routes
-    if (await handleFamilyRoutes(req, res)) return;
-
-    // Assessment routes
-    if (await handleAssessmentRoutes(req, res)) return;
-
-    // Treatment plan routes
-    if (await handlePlanRoutes(req, res)) return;
-
-    // Tracking routes
-    if (await handleTrackingRoutes(req, res)) return;
-
-    // Scale routes
-    if (await handleScaleRoutes(req, res)) return;
-
-    // Chat/History routes
-    if (await handleChatRoutes(req, res)) return;
-
-    // Chatbot tool/session routes (assessment history, trends, tool sessions, summaries)
     if (await handleChatbotRoutes(req, res)) return;
 
     // ── 404 ──
@@ -189,14 +167,13 @@ wss.on('connection', (ws: WebSocket) => {
 
 // ── Start ──
 
-// Initialize database and seed data
+// Initialize data directory
 initDB();
-seedAll();
 
 server.listen(PORT, () => {
-  console.log(`\n🦕 小柱 Backend Server`);
+  console.log(`\n🦕 小柱 Backend Server (LLM + Chatbot Support)`);
   console.log(`   HTTP:       http://localhost:${PORT}`);
   console.log(`   WebSocket:  ws://localhost:${PORT}/api/chatbot/ws/chat`);
   console.log(`   LLM:        ${isConfigured() ? '✅ Configured' : '❌ Not configured (set DEEPSEEK_API_KEY)'}`);
-  console.log(`   APIs:       14 integration + 5 chatbot endpoints ready\n`);
+  console.log(`   APIs:       6 chatbot support endpoints (CRUD migrated to Python :8000)\n`);
 });

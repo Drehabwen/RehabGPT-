@@ -34,6 +34,8 @@ export const useAgentStore = create<AgentState>()(
         patientId: state.patientId,
         patientName: state.patientName,
         patientAge: state.patientAge,
+        patientSex: state.patientSex,
+        patientSessionId: state.patientSessionId,
         branch: state.branch,
         stepIndex: state.stepIndex,
         answers: state.answers,

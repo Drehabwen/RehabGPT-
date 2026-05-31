@@ -8,7 +8,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 // Phase D: 结构化上下文同步
-import { useChildContextStore } from '../../context/ChildContextStore';
+import { useChildContextStore } from '../../context';
+import { submit as submitTracking } from '../../services/trackingService';
 import type {
   DailyTracking,
   WeeklyTracking,
@@ -216,28 +217,21 @@ export const useTrackingStore = create<TrackingState>()(
         }
 
         // Phase 3: 静默同步到后端（失败不影响本地保存）
-        const apiBase = import.meta.env.VITE_API_BASE || '';
-        fetch(`${apiBase}/api/integration/tracking/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patient_id: state.patientId,
-            patient_name: state.patientName,
-            tracking_date: data.date,
-            exercises_completed: data.exercise.completed
-              ? [{ name: '康复训练', duration: data.exercise.duration, completed: true }]
-              : [],
-            total_duration_min: data.exercise.completed ? data.exercise.duration : 0,
-            symptoms: {
-              pain_level: data.pain.hasPain ? data.pain.level : 0,
-              pain_location: data.pain.hasPain ? data.pain.location : '',
-              abnormal_symptoms: data.abnormalSymptoms,
-              mood: data.mood,
-            },
-            notes: data.notes || '',
-          }),
-        }).catch((err) => {
-          console.warn('[TrackingStore] Sync to backend failed (non-blocking):', err);
+        submitTracking({
+          patient_id: state.patientId,
+          patient_name: state.patientName,
+          tracking_date: data.date,
+          exercises_completed: data.exercise.completed
+            ? [{ name: '康复训练', duration: data.exercise.duration, completed: true }]
+            : [],
+          total_duration_min: data.exercise.completed ? data.exercise.duration : 0,
+          symptoms: {
+            pain_level: data.pain.hasPain ? data.pain.level : 0,
+            pain_location: data.pain.hasPain ? data.pain.location.join('、') : '',
+            abnormal_symptoms: data.abnormalSymptoms,
+            mood: data.mood,
+          },
+          notes: data.notes || '',
         });
       },
 

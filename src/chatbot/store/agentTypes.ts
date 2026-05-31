@@ -43,6 +43,8 @@ export interface AgentState {
   patientId: string | null;
   patientName: string;
   patientAge: number | null;
+  patientSex: 'male' | 'female' | null;
+  patientSessionId: string | null;
   hasHistory: boolean;
   lastAssessmentSummary: string | null;
 
@@ -62,7 +64,13 @@ export interface AgentState {
   llmProcessing: boolean;
 
   // Actions — Lifecycle
-  initWithPatient: (id: string, name: string, age?: number | null) => void;
+  initWithPatient: (
+    id: string,
+    name: string,
+    age?: number | null,
+    sex?: string | null,
+    sessionId?: string | null,
+  ) => void;
   resetAgent: () => void;
 
   // Actions — Conversation

@@ -8,14 +8,13 @@
  * 4. 移除 phaseWorkflows（流程由代码控制，不塞进 prompt）
  */
 
-import type { RiskResult, AdamsAutoResult, Answers } from '../types';
+import type { RiskResult, Answers } from '../types';
 import { buildPersonaPrompt } from './corePersona';
 import { buildClinicalPrompt } from './clinicalCore';
 
 export type ConversationPhase =
   | 'greeting'
   | 'screening'
-  | 'adams_test'
   | 'result_review'
   | 'report_chat'
   | 'rehab_guidance'
@@ -32,7 +31,7 @@ export interface LLMContext {
   currentQuestionKey?: string;
   answers?: Answers;
   riskResult?: RiskResult | null;
-  adamsResult?: AdamsAutoResult | null;
+  adamsResult?: unknown | null;
   hasHistory: boolean;
   hasDueReminder: boolean;
   lastAssessmentSummary?: string | null;
@@ -95,8 +94,6 @@ function buildPatientContext(ctx: LLMContext): string {
 function buildPhaseHint(ctx: LLMContext): string {
   const hints: Record<string, string> = {
     greeting: '初次问候，简短温暖',
-    screening: `筛查中(${ctx.stepIndex}/${ctx.totalSteps})，引导回答`,
-    adams_test: '指导Adams弯腰测试',
     result_review: '解读结果，安抚+明确建议',
     report_chat: '分析历史数据',
     rehab_guidance: '推荐居家训练',
@@ -117,7 +114,6 @@ function buildToolsHint(tools: string[]): string {
     comparison: '历史对比',
     rom: '关节活动度',
     scales: '量表',
-    adams_camera: 'Adams摄像头',
     psych: '心理评定',
   };
   return `工具：${tools.map((t) => toolMap[t] || t).join('/')}`;
@@ -131,7 +127,6 @@ function buildFormatHint(ctx: LLMContext): string {
 
   const extras: Record<string, string> = {
     result_review: '，先共情再解释',
-    screening: '，清晰呈现选项',
   };
 
   return base + (extras[ctx.phase] || '');
@@ -142,7 +137,7 @@ function buildFormatHint(ctx: LLMContext): string {
  *
  * 预估 token 消耗：
  * - greeting/free_chat: ~500 tokens
- * - screening/adams_test: ~700 tokens
+ * - result_review: ~600 tokens
  * - result_review: ~600 tokens
  * - rehab_guidance: ~800 tokens
  */

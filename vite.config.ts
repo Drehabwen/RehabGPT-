@@ -13,18 +13,15 @@ export default defineConfig({
   server: {
     port: 5175,
     proxy: {
+      // /api/chatbot 必须在 /api/integration 之前（Vite 从上到下匹配）
       '/api/chatbot': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8002',  // LLM + WebSocket 仍在 Node
         changeOrigin: true,
         ws: true,
       },
-      '/api': {
-        target: 'http://localhost:8002',
+      '/api/integration': {
+        target: 'http://localhost:8000',  // 所有 CRUD 数据走 Python（唯一数据源）
         changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://localhost:8002',
-        ws: true,
       },
     },
   },

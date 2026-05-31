@@ -79,14 +79,4 @@ export interface RiskResult {
 }
 
 // ── 摄像头视图状态 ──
-export type ChatbotView = 'chat' | 'adams_camera' | 'result';
-
-// ── Adam's 自动分析结果 ──
-export interface AdamsAutoResult {
-  shoulderAsymmetry: number;
-  hipAsymmetry: number;
-  asymmetryRatio: number;
-  ribHumpDetected: boolean;
-  confidence: 'high' | 'medium' | 'low';
-  recommendation: 'symmetrical' | 'mild_asymmetry' | 'significant_hump';
-}
+export type ChatbotView = 'chat' | 'result';

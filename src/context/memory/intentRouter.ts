@@ -11,7 +11,7 @@
  * - 多意图且分数接近时标记 needsLLMClassification
  */
 
-import type { IntentType, IntentResult } from './types';
+import type { IntentType, IntentResult } from '../model/types';
 
 // ── 关键词规则表 ──
 

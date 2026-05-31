@@ -12,9 +12,9 @@
  * - feedback:    ~410 token
  */
 
-import type { IntentType, ChildContext, RehabStage } from './types';
-import { buildPersonaPrompt } from '../chatbot/prompts/corePersona';
-import { buildClinicalPrompt } from '../chatbot/prompts/clinicalCore';
+import type { IntentType, ChildContext, RehabStage } from '../model/types';
+import { buildPersonaPrompt } from '../../chatbot/prompts/corePersona';
+import { buildClinicalPrompt } from '../../chatbot/prompts/clinicalCore';
 
 // ── 阶段指引（根据 RehabStage 调整语气和职责）──
 

@@ -10,23 +10,24 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ChildContext, ExtractionResult } from './types';
-import { DEFAULT_CHILD_CONTEXT } from './types';
-import { deriveStage, recalculateFlags, applyExtraction, consolidateMemoryForNewDay } from './updateRules';
+import type { ChildContext, ExtractionResult } from '../model/types';
+import { DEFAULT_CHILD_CONTEXT } from '../model/types';
+import { RISK_LEVEL_MAP } from '../model/risk';
+import { deriveStage, recalculateFlags, applyExtraction, consolidateMemoryForNewDay } from '../engine/updateRules';
 
-/** 康复师风险等级 → ChildContext 内部枚举映射 */
-export const RISK_LEVEL_MAP: Record<string, 'none' | 'low' | 'medium' | 'high'> = {
-  low: 'low', mild: 'low',
-  medium: 'medium', moderate: 'medium',
-  high: 'high',
-  none: 'none',
-};
+export { RISK_LEVEL_MAP };
 
 interface ChildContextState {
   context: ChildContext;
 
   /** 登录后初始化身份，重置其他字段 */
-  initialize: (patientId: string, patientName: string, age?: number | null, gender?: string) => void;
+  initialize: (
+    patientId: string,
+    patientName: string,
+    age?: number | null,
+    genderOrSex?: string | null,
+    sessionId?: string | null,
+  ) => void;
 
   /** 从 API 同步评估摘要 */
   setAssessment: (data: {
@@ -65,6 +66,9 @@ interface ChildContextState {
   /** 对话后异步更新记忆（要点提取器回调） */
   applyExtractionResult: (result: ExtractionResult) => void;
 
+  /** 从后端同步结构化待办任务 */
+  setPendingScales: (tasks: ChildContext['tasks']['pendingScales']) => void;
+
   /** 检测跨日，清理过期记忆 */
   consolidateIfNewDay: () => void;
 
@@ -75,15 +79,26 @@ interface ChildContextState {
   reset: () => void;
 }
 
+function normalizeSex(genderOrSex?: string | null): {
+  gender: '男' | '女' | '';
+  sex: 'male' | 'female' | null;
+} {
+  if (genderOrSex === 'male' || genderOrSex === '男') {
+    return { gender: '男', sex: 'male' };
+  }
+  if (genderOrSex === 'female' || genderOrSex === '女') {
+    return { gender: '女', sex: 'female' };
+  }
+  return { gender: '', sex: null };
+}
+
 export const useChildContextStore = create<ChildContextState>()(
   persist(
     (set, get) => ({
       context: { ...DEFAULT_CHILD_CONTEXT },
 
-      initialize: (patientId, patientName, age, gender) => {
-        const genderLabel =
-          gender === 'male' ? '男' :
-          gender === 'female' ? '女' : '';
+      initialize: (patientId, patientName, age, genderOrSex, sessionId) => {
+        const normalized = normalizeSex(genderOrSex);
         set({
           context: {
             ...DEFAULT_CHILD_CONTEXT,
@@ -91,7 +106,10 @@ export const useChildContextStore = create<ChildContextState>()(
               patientId,
               patientName,
               age: age ?? 0,
-              gender: genderLabel,
+              gender: normalized.gender,
+              sex: normalized.sex,
+              sessionId: sessionId || null,
+              familyBound: true,
             },
             // 保留旧的记忆（如果有，切换回同一孩子时有用）
             memory: get().context.identity.patientId === patientId
@@ -171,6 +189,21 @@ export const useChildContextStore = create<ChildContextState>()(
         });
       },
 
+      setPendingScales: (tasks) => {
+        set((s) => {
+          const ctx = {
+            ...s.context,
+            tasks: {
+              ...s.context.tasks,
+              pendingScales: tasks,
+            },
+          };
+          const flags = recalculateFlags(ctx);
+          const stage = deriveStage({ ...ctx, flags });
+          return { context: { ...ctx, flags, stage } };
+        });
+      },
+
       consolidateIfNewDay: () => {
         set((s) => {
           const patches = consolidateMemoryForNewDay(s.context);
@@ -196,6 +229,39 @@ export const useChildContextStore = create<ChildContextState>()(
     }),
     {
       name: 'child-context-store',
+      merge: (persisted, current) => {
+        const persistedState = persisted as Partial<ChildContextState> | undefined;
+        const persistedContext = persistedState?.context;
+
+        return {
+          ...current,
+          ...persistedState,
+          context: {
+            ...DEFAULT_CHILD_CONTEXT,
+            ...persistedContext,
+            identity: {
+              ...DEFAULT_CHILD_CONTEXT.identity,
+              ...(persistedContext?.identity || {}),
+            },
+            memory: {
+              ...DEFAULT_CHILD_CONTEXT.memory,
+              ...(persistedContext?.memory || {}),
+            },
+            progress: {
+              ...DEFAULT_CHILD_CONTEXT.progress,
+              ...(persistedContext?.progress || {}),
+            },
+            tasks: {
+              ...DEFAULT_CHILD_CONTEXT.tasks,
+              ...(persistedContext?.tasks || {}),
+            },
+            flags: {
+              ...DEFAULT_CHILD_CONTEXT.flags,
+              ...(persistedContext?.flags || {}),
+            },
+          },
+        };
+      },
       partialize: (state) => ({
         context: {
           identity: state.context.identity,

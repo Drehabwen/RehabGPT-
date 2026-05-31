@@ -9,8 +9,8 @@
  *   → extractionService.extract → useChildContextStore.applyExtractionResult
  */
 
-import type { ChildContext, ExtractionResult } from './types';
-import { useChildContextStore } from './ChildContextStore';
+import type { ChildContext, ExtractionResult } from '../model/types';
+import { useChildContextStore } from '../store/ChildContextStore';
 
 // ── 提取 System Prompt ──
 

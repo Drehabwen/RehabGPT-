@@ -18,7 +18,8 @@ import {
 import type { AgentState, AgentToolId } from './agentTypes';
 import { BOT_TYPING_DELAYS } from './agentTypes';
 // Phase D: 结构化上下文初始化
-import { useChildContextStore } from '../../context/ChildContextStore';
+import { mapPendingScalesToContext, useChildContextStore } from '../../context';
+import { getPending as getPendingScales } from '../../services/scaleService';
 
 // ── 共享工具函数 ──
 
@@ -80,6 +81,8 @@ export interface AgentCoreSlice {
   patientId: string | null;
   patientName: string;
   patientAge: number | null;
+  patientSex: 'male' | 'female' | null;
+  patientSessionId: string | null;
   hasHistory: boolean;
   lastAssessmentSummary: string | null;
   hasDueReminder: boolean;
@@ -89,7 +92,13 @@ export interface AgentCoreSlice {
 
   getCurrentStep: () => ReturnType<AgentState['getCurrentStep']>;
   getTotalSteps: () => number;
-  initWithPatient: (id: string, name: string, age?: number | null) => void;
+  initWithPatient: (
+    id: string,
+    name: string,
+    age?: number | null,
+    sex?: string | null,
+    sessionId?: string | null,
+  ) => void;
   resetAgent: () => void;
   selectBranch: (branch: BranchId) => Promise<void>;
   advanceStep: (answer?: string | number) => Promise<void>;
@@ -115,6 +124,8 @@ export function createAgentCoreSlice(
     patientId: null,
     patientName: '',
     patientAge: null,
+    patientSex: null,
+    patientSessionId: null,
     hasHistory: false,
     lastAssessmentSummary: null,
     hasDueReminder: false,
@@ -133,7 +144,7 @@ export function createAgentCoreSlice(
     },
 
     // ── Patient init ──
-    initWithPatient: async (id, name, age) => {
+    initWithPatient: async (id, name, age, sex, sessionId) => {
       const current = get();
 
       // If already initialized with same patient (rehydrated from localStorage), skip re-init
@@ -150,6 +161,8 @@ export function createAgentCoreSlice(
         patientId: id,
         patientName: name,
         patientAge: age ?? null,
+        patientSex: sex === 'male' || sex === 'female' ? sex : null,
+        patientSessionId: sessionId || null,
         hasDueReminder,
         hasHistory: false,
         lastAssessmentSummary: null,
@@ -167,7 +180,7 @@ export function createAgentCoreSlice(
       });
 
       // Phase D: 初始化结构化上下文（ChildContext）
-      useChildContextStore.getState().initialize(id, name, age ?? null, undefined);
+      useChildContextStore.getState().initialize(id, name, age ?? null, sex, sessionId);
 
       // Check LLM availability (non-blocking)
       get().checkLLMStatus().then((available) => {
@@ -196,29 +209,28 @@ export function createAgentCoreSlice(
 
       // Check pending scales from integration backend
       let pendingScaleMessage: ChatMessage | null = null;
+      let pendingScaleTasks: ReturnType<typeof mapPendingScalesToContext> = [];
       try {
-        const apiBase = import.meta.env.VITE_API_BASE || '';
-        const res = await fetch(`${apiBase}/api/integration/scale/pending/${id}`);
-        if (res.ok) {
-          const scales = await res.json();
-          if (scales && scales.length > 0) {
-            const latestScale = scales[0];
-            pendingScaleMessage = {
-              id: nanoid(8),
-              role: 'bot' as const,
-              text: `您的康复师为您下发了日常量表评定，点击下方卡片即可开始完成评估哦！`,
-              timestamp: Date.now() + 100,
-              scalePayload: {
-                taskId: latestScale.task_id,
-                sessionId: latestScale.session_id,
-                scaleId: latestScale.scale_id as 'SRS-22' | 'ODI' | 'VAS',
-              }
-            };
-          }
+        const scales = await getPendingScales(id);
+        if (scales && scales.length > 0) {
+          pendingScaleTasks = mapPendingScalesToContext(scales);
+          const latestScale = scales[0];
+          pendingScaleMessage = {
+            id: nanoid(8),
+            role: 'bot' as const,
+            text: `您的康复师为您下发了日常量表评定，点击下方卡片即可开始完成评估哦！`,
+            timestamp: Date.now() + 100,
+            scalePayload: {
+              taskId: latestScale.task_id,
+              sessionId: latestScale.session_id,
+              scaleId: latestScale.scale_id as 'SRS-22' | 'ODI' | 'VAS',
+            }
+          };
         }
       } catch (err) {
         console.error('[initWithPatient] Failed to fetch pending scales:', err);
       }
+      useChildContextStore.getState().setPendingScales(pendingScaleTasks);
 
       // Send welcome after delay
       setTimeout(() => {
@@ -256,6 +268,8 @@ export function createAgentCoreSlice(
         riskResult: null,
         hasHistory: false,
         lastAssessmentSummary: null,
+        patientSex: null,
+        patientSessionId: null,
         llmAvailable: false,
         llmProcessing: false,
       });

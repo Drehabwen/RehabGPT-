@@ -15,80 +15,18 @@ import {
   shouldFallback,
   resetFailureCount,
   getSessionSummary,
-  startToolSession,
   type PatientContext,
 } from '../utils/agentChatService';
-// 旧提示词系统（保留兼容，逐步迁移）
-import {
-  buildAdaptiveSystemPrompt,
-  buildUserMessage as buildAdaptiveUserMessage,
-  type LLMContext,
-  type ConversationPhase,
-} from '../prompts/adaptiveSystemPrompt';
 // 新上下文工程
 import {
-  classifyIntent,
   shouldExtract,
   scheduleExtraction,
-  buildDynamicSystemPrompt,
-  buildUserMessage as buildContextUserMessage,
+  assembleFreeChatContext,
+  useChildContextStore,
 } from '../../context';
-import { useChildContextStore } from '../../context/ChildContextStore';
 import { countTokens } from '../utils/tokenCounter';
 import { buildLLMMessages, getTruncationStats } from '../utils/contextWindow';
 import { responseCache } from '../utils/responseCache';
-import { BRANCH_FLOWS } from '../constants/branches';
-
-// ── 根据当前状态推断对话阶段 ──
-function inferConversationPhase(state: AgentState): ConversationPhase {
-  const { branch, view, riskResult, activeTool } = state;
-
-  if (view === 'result' && riskResult) return 'result_review';
-
-  switch (branch) {
-    case 'main':
-      return state.stepIndex === 0 ? 'greeting' : 'free_chat';
-    case 'reassess':
-      return 'screening';
-    case 'report':
-      return 'report_chat';
-    case 'rehab':
-      return 'rehab_guidance';
-    case 'followup':
-      return 'followup';
-    default:
-      return 'free_chat';
-  }
-}
-
-// ── 构建 LLM 完整上下文 ──
-function buildLLMContext(state: AgentState): LLMContext {
-  const phase = inferConversationPhase(state);
-  const currentFlow = BRANCH_FLOWS[state.branch] || [];
-  const currentStep = currentFlow[state.stepIndex];
-
-  const pendingScaleMsg = state.messages.find((m) => m.scalePayload);
-  const pendingScale = pendingScaleMsg ? pendingScaleMsg.scalePayload : null;
-
-  return {
-    patientName: state.patientName || '孩子',
-    patientAge: state.patientAge,
-    patientGender: state.answers.gender as string | undefined,
-    phase,
-    stepIndex: state.stepIndex,
-    totalSteps: currentFlow.length,
-    currentQuestionKey: currentStep?.questionKey,
-    answers: state.answers,
-    riskResult: state.riskResult,
-    adamsResult: state.adamsAutoResult,
-    hasHistory: state.hasHistory,
-    hasDueReminder: state.hasDueReminder,
-    lastAssessmentSummary: state.lastAssessmentSummary,
-    availableTools: state.suggestedTools,
-    currentDate: new Date().toISOString().split('T')[0],
-    pendingScale,
-  };
-}
 
 /**
  * 每日会话收敛与记忆压缩
@@ -188,7 +126,7 @@ export function createAgentLLMSlice(
       );
 
       const state = get();
-      const { patientName, patientAge, hasDueReminder } = state;
+      const { patientName, hasDueReminder } = state;
 
       if (shouldFallback()) {
         set({ llmAvailable: false });
@@ -238,9 +176,9 @@ export function createAgentLLMSlice(
 
       // Phase B: 新上下文工程 — 意图路由 + 动态注入
       const childCtx = useChildContextStore.getState().context;
-      const intent = classifyIntent(text);
-      const systemPrompt = buildDynamicSystemPrompt(intent.primary, childCtx);
-      const userMessage = buildContextUserMessage(text, intent.primary);
+      const assembledContext = assembleFreeChatContext(text, childCtx);
+      const systemPrompt = assembledContext.systemPrompt;
+      const userMessage = assembledContext.userMessage || text;
 
       // Token 感知的消息构建
       const llmMessages = buildLLMMessages(
@@ -252,15 +190,16 @@ export function createAgentLLMSlice(
       // 调试：记录 token 使用情况和截断统计
       const systemTokens = countTokens(systemPrompt);
       const stats = getTruncationStats(state.messages, llmMessages.slice(1, -1) as unknown as ChatMessage[]);
-      console.log(`[LLM] Intent: ${intent.primary}(${Math.round(intent.confidence * 100)}%) | System: ${systemTokens}t | History: ${stats.originalCount}→${stats.truncatedCount} msgs`);
+      console.log(`[LLM] Intent: ${assembledContext.intent || 'chat'} | System: ${systemTokens}t | History: ${stats.originalCount}→${stats.truncatedCount} msgs`);
 
       const patientContext: PatientContext = {
-        name: patientName || '孩子',
-        age: patientAge,
+        name: assembledContext.snapshot.identity.displayName,
+        age: assembledContext.snapshot.identity.age,
         hasHistory: state.hasHistory,
         hasDueReminder,
-        riskLevel: state.riskResult?.level ?? null,
-        lastAssessmentSummary: state.lastAssessmentSummary,
+        riskLevel: assembledContext.snapshot.clinical.assessment?.riskLevel ?? null,
+        lastAssessmentSummary:
+          assembledContext.snapshot.clinical.assessment?.summaryText ?? state.lastAssessmentSummary,
       };
 
       // 捕获回复文本用于提取

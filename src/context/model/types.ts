@@ -72,6 +72,9 @@ export interface ChildContext {
     patientName: string;
     age: number;
     gender: '男' | '女' | '';
+    sex: 'male' | 'female' | null;
+    sessionId: string | null;
+    familyBound: boolean;
   };
 
   /** 第二层：康复师评估 — 来源：GET /api/integration/assessment/summary */
@@ -131,7 +134,17 @@ export interface ChildContext {
     totalInteractions: number;
   };
 
-  /** 第六层：动态标记 — 来源：纯规则计算（不调 LLM），每次上下文组装前更新 */
+  /** 第六层：结构化任务 — 来源：后端待办/康复师推送，不依赖聊天消息承载事实 */
+  tasks: {
+    pendingScales: Array<{
+      taskId: string;
+      sessionId: string;
+      scaleId: 'SRS-22' | 'ODI' | 'VAS';
+      assignedAt?: string | null;
+    }>;
+  };
+
+  /** 第七层：动态标记 — 来源：纯规则计算（不调 LLM），每次上下文组装前更新 */
   flags: {
     needsReassessment: boolean;
     hasUnreadPlan: boolean;
@@ -141,14 +154,22 @@ export interface ChildContext {
     shouldNotifyTherapist: boolean;
   };
 
-  /** 第七层：派生状态 — 由 deriveStage() 根据以上字段计算 */
+  /** 第八层：派生状态 — 由 deriveStage() 根据以上字段计算 */
   stage: RehabStage;
 }
 
 // ── 默认值 ──
 
 export const DEFAULT_CHILD_CONTEXT: ChildContext = {
-  identity: { patientId: '', patientName: '', age: 0, gender: '' },
+  identity: {
+    patientId: '',
+    patientName: '',
+    age: 0,
+    gender: '',
+    sex: null,
+    sessionId: null,
+    familyBound: false,
+  },
   assessment: null,
   treatment: null,
   progress: {
@@ -169,6 +190,9 @@ export const DEFAULT_CHILD_CONTEXT: ChildContext = {
     parentSentiment: 'neutral',
     lastInteractionAt: '',
     totalInteractions: 0,
+  },
+  tasks: {
+    pendingScales: [],
   },
   flags: {
     needsReassessment: false,

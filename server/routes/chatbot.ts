@@ -15,7 +15,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { nanoid } from 'nanoid';
 import { parseBody, sendJSON, sendError, matchPath } from './utils';
 import { generateSessionSummary, type LLMMessage } from '../llmClient';
-import { assessmentsDB } from '../db';
+// Phase 5: 不再从本地 JSON DB 读取，改为内部 HTTP 调用 Rehab Python (:8000)
+// assessmentsDB 已移除 — 数据统一在 Python SQLite
 
 // ── 工具会话存储（内存，重启丢失） ──
 
@@ -40,53 +41,69 @@ export async function handleChatbotRoutes(
   const pathname = url.pathname;
 
   // GET /api/chatbot/assessment-history/:name
+  // Phase 5: 内部 HTTP 调用 Rehab Python 获取数据
   const historyMatch = matchPath('api/chatbot/assessment-history/:name', pathname);
   if (historyMatch && req.method === 'GET') {
     const name = decodeURIComponent(historyMatch.name);
-
-    // 从评估摘要中查找匹配患者名的记录
-    const allAssessments = assessmentsDB.getAll();
-    const matched = allAssessments.filter(
-      (a) => a.patient_name && a.patient_name.includes(name),
-    );
-
-    const assessments = matched.map((a) => ({
-      id: a.summary_id,
-      sessionId: a.session_id,
-      toolId: 'risk_assessment',
-      status: 'completed',
-      startedAt: a.created_at,
-      completedAt: a.created_at,
-      summary: a.summary_text,
-      patientName: a.patient_name,
-      patientAge: null,
-    }));
-
-    sendJSON(res, 200, { assessments });
+    try {
+      const pyResp = await fetch(
+        `http://localhost:8000/api/integration/assessment/search?name=${encodeURIComponent(name)}`,
+      );
+      if (!pyResp.ok) {
+        sendJSON(res, 200, { assessments: [] });
+        return true;
+      }
+      const history = await pyResp.json() as any[];
+      const assessments = history.map((a: any) => ({
+        id: a.summary_id,
+        sessionId: a.session_id,
+        toolId: 'risk_assessment',
+        status: 'completed',
+        startedAt: a.created_at,
+        completedAt: a.created_at,
+        summary: a.summary_text,
+        patientName: a.patient_name,
+        patientAge: null,
+      }));
+      sendJSON(res, 200, { assessments });
+    } catch (err) {
+      console.error('[Chatbot] assessment-history fetch error:', err);
+      sendJSON(res, 200, { assessments: [] });
+    }
     return true;
   }
 
   // GET /api/chatbot/assessment-trend/:name/:tool
+  // Phase 5: 内部 HTTP 调用 Rehab Python 获取数据
   const trendMatch = matchPath('api/chatbot/assessment-trend/:name/:tool', pathname);
   if (trendMatch && req.method === 'GET') {
     const name = decodeURIComponent(trendMatch.name);
-
-    // 查找该患者的所有评估，按时间排序
-    const allAssessments = assessmentsDB.getAll();
-    const matched = allAssessments
-      .filter((a) => a.patient_name && a.patient_name.includes(name))
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-    sendJSON(res, 200, {
-      patientName: name,
-      toolId: trendMatch.tool,
-      dataPoints: matched.map((a) => ({
-        date: a.created_at.split('T')[0],
-        riskLevel: a.risk_level,
-        riskLabel: a.risk_label,
-        summary: a.summary_text?.slice(0, 100),
-      })),
-    });
+    try {
+      const pyResp = await fetch(
+        `http://localhost:8000/api/integration/assessment/search?name=${encodeURIComponent(name)}`,
+      );
+      if (!pyResp.ok) {
+        sendJSON(res, 200, { patientName: name, toolId: trendMatch.tool, dataPoints: [] });
+        return true;
+      }
+      const history = await pyResp.json() as any[];
+      history.sort(
+        (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+      sendJSON(res, 200, {
+        patientName: name,
+        toolId: trendMatch.tool,
+        dataPoints: history.map((a: any) => ({
+          date: (a.created_at || '').split('T')[0],
+          riskLevel: a.risk_level,
+          riskLabel: a.risk_label,
+          summary: (a.summary_text || '').slice(0, 100),
+        })),
+      });
+    } catch (err) {
+      console.error('[Chatbot] assessment-trend fetch error:', err);
+      sendJSON(res, 200, { patientName: name, toolId: trendMatch.tool, dataPoints: [] });
+    }
     return true;
   }
 

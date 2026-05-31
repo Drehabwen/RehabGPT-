@@ -5,17 +5,11 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getPending } from '../../services/planService';
+import { isAbortError } from '../../services/apiClient';
+import type { TreatmentPlan } from '../../services/types';
 
-export interface TreatmentPlan {
-  plan_id: string;
-  patient_id: string;
-  patient_name: string | null;
-  therapist_name: string | null;
-  plan_content: string;
-  status: string;
-  created_at: string;
-  updated_at: string | null;
-}
+export type { TreatmentPlan };
 
 interface UseTreatmentPlanResult {
   plans: TreatmentPlan[];
@@ -45,23 +39,10 @@ export function useTreatmentPlan(patientId: string | null): UseTreatmentPlanResu
     setError(null);
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || '';
-      const resp = await fetch(`${apiBase}/api/integration/plan/pending/${encodeURIComponent(patientId)}`, {
-        signal: controller.signal,
-      });
-
-      if (!resp.ok) {
-        if (resp.status === 404) {
-          setPlans([]);
-          return;
-        }
-        throw new Error(`HTTP ${resp.status}`);
-      }
-
-      const data: TreatmentPlan[] = await resp.json();
+      const data = await getPending(patientId, controller.signal);
       setPlans(data);
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (isAbortError(err)) return;
       console.warn('[useTreatmentPlan] Fetch failed:', err);
       setError(err instanceof Error ? err.message : '加载失败');
     } finally {

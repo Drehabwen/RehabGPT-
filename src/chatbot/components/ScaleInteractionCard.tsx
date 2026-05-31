@@ -14,6 +14,7 @@ import {
   ChevronRightCircle
 } from 'lucide-react';
 import { useChatbotStore } from '../store/useChatbotStore';
+import { submitScale } from '../../services/scaleService';
 
 export interface ScaleAnswer {
   questionId: number;
@@ -394,23 +395,12 @@ export const ScaleInteractionCard: React.FC<ScaleInteractionCardProps> = ({
         createdAt: Date.now()
       };
 
-      const apiBase = import.meta.env.VITE_API_BASE || '';
-      const response = await fetch(`${apiBase}/api/integration/scale/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          task_id: taskId,
-          session_id: sessionId,
-          patient_id: patientId || undefined,
-          scale_data: scaleData
-        })
+      await submitScale({
+        task_id: taskId,
+        session_id: sessionId,
+        patient_id: patientId || undefined,
+        scale_data: scaleData,
       });
-
-      if (!response.ok) {
-        throw new Error(`回传失败: ${response.statusText}`);
-      }
 
       setSubmittedData(scaleData);
       setStatus('success');

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useChatbotStore } from '../chatbot/store/useChatbotStore';
 import { useAgentStore } from '../chatbot/store/useAgentStore';
 import { ArrowRight, Search, Check, Loader2, AlertCircle } from 'lucide-react';
+import { login } from '../services/familyService';
 
 export const LoginPage: React.FC = () => {
   // On mount, proactively clear and reset any previous session states to prevent login UI-lock bugs
@@ -55,18 +56,7 @@ export const LoginPage: React.FC = () => {
       setErrorMsg('');
       setFoundSubject(null);
       try {
-        const response = await fetch(`/api/integration/family/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ family_code: code }),
-        });
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('未找到该家庭码对应的档案，请核对后重试');
-          }
-          throw new Error('网络异常或服务器未响应，请重试');
-        }
-        const data = await response.json();
+        const data = await login(code);
         setFoundSubject(data);
       } catch (err: unknown) {
         setErrorMsg(err instanceof Error ? err.message : '查询失败');
@@ -85,18 +75,12 @@ export const LoginPage: React.FC = () => {
 
     const { patient_id, display_name, sex, age, session_id } = foundSubject;
 
-    // Set in Zustand store
-    setPatient(patient_id, display_name);
-
-    // Map gender correctly
-    const genderMapped = sex === 'male' ? '男' : sex === 'female' ? '女' : '';
-
-    useChatbotStore.setState({
+    setPatient(patient_id, display_name, {
+      age: age ?? null,
+      sex: sex ?? null,
+      sessionId: session_id ?? null,
       answers: {
         name: display_name,
-        age: age || undefined,
-        gender: genderMapped || undefined,
-        screening_session_id: session_id || undefined,
         from_screening: true,
       },
     });

@@ -5,7 +5,6 @@
  *
  * 分支结构：
  *   main      → 欢迎 + 主菜单（4 个分支入口）
- *   reassess  → 给孩子做检查（约 12 步）
  *   report    → 查看检查结果（动态）
  *   rehab     → 居家训练建议（规则引擎）
  *   followup  → 复查提醒（localStorage）
