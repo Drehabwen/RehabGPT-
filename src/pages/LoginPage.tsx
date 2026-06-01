@@ -4,6 +4,7 @@ import { useChatbotStore } from '../chatbot/store/useChatbotStore';
 import { useAgentStore } from '../chatbot/store/useAgentStore';
 import { ArrowRight, Search, Check, Loader2, AlertCircle } from 'lucide-react';
 import { login } from '../services/familyService';
+import { useChildContextStore } from '../context';
 
 export const LoginPage: React.FC = () => {
   // On mount, proactively clear and reset any previous session states to prevent login UI-lock bugs
@@ -15,6 +16,7 @@ export const LoginPage: React.FC = () => {
       riskResult: null,
     });
     useAgentStore.getState().resetAgent();
+    useChildContextStore.getState().reset();
   }, []);
 
   const [code, setCode] = useState('');
@@ -74,6 +76,9 @@ export const LoginPage: React.FC = () => {
     if (!foundSubject) return;
 
     const { patient_id, display_name, sex, age, session_id } = foundSubject;
+
+    // Phase 5: 初始化 ChildContext 身份，使上下文注入引擎能正确注入患者信息到 LLM
+    useChildContextStore.getState().initialize(patient_id, display_name, age, sex, session_id);
 
     setPatient(patient_id, display_name, {
       age: age ?? null,
