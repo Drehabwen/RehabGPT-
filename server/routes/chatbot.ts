@@ -14,7 +14,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { nanoid } from 'nanoid';
 import { parseBody, sendJSON, sendError, matchPath } from './utils';
-import { generateSessionSummary, type LLMMessage } from '../llmClient';
+import { chatCompletion, generateSessionSummary, isConfigured, type LLMMessage } from '../llmClient';
+import {
+  buildLLMMessageList,
+  DEFAULT_CHAT_SYSTEM_PROMPT,
+  detectToolCall,
+  type IncomingChatMessage,
+} from '../chatMessages';
+import { REHAB_API_BASE } from '../config';
 // Phase 5: 不再从本地 JSON DB 读取，改为内部 HTTP 调用 Rehab Python (:8000)
 // assessmentsDB 已移除 — 数据统一在 Python SQLite
 
@@ -31,6 +38,10 @@ interface ToolSession {
 
 const toolSessions = new Map<string, ToolSession>();
 
+function rehabApiUrl(path: string): string {
+  return `${REHAB_API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 // ── 路由处理 ──
 
 export async function handleChatbotRoutes(
@@ -40,6 +51,44 @@ export async function handleChatbotRoutes(
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
+  // POST /api/chatbot/chat
+  if (pathname === '/api/chatbot/chat' && req.method === 'POST') {
+    try {
+      if (!isConfigured()) {
+        sendError(res, 503, 'LLM not configured');
+        return true;
+      }
+
+      const body = await parseBody<{
+        messages?: IncomingChatMessage[];
+        systemPrompt?: string;
+      }>(req);
+
+      const messages = buildLLMMessageList(
+        body.messages,
+        body.systemPrompt || DEFAULT_CHAT_SYSTEM_PROMPT,
+      );
+
+      if (!messages.some((msg) => msg.role !== 'system')) {
+        sendError(res, 400, 'messages are required');
+        return true;
+      }
+
+      const result = await chatCompletion(messages);
+      const toolCall = detectToolCall(result.content);
+
+      sendJSON(res, 200, {
+        type: toolCall ? 'tool_call' : 'text',
+        content: result.content,
+        toolCall,
+      });
+    } catch (err) {
+      console.error('[Chatbot] Chat completion error:', err);
+      sendError(res, 500, 'LLM chat failed');
+    }
+    return true;
+  }
+
   // GET /api/chatbot/assessment-history/:name
   // Phase 5: 内部 HTTP 调用 Rehab Python 获取数据
   const historyMatch = matchPath('api/chatbot/assessment-history/:name', pathname);
@@ -47,7 +96,7 @@ export async function handleChatbotRoutes(
     const name = decodeURIComponent(historyMatch.name);
     try {
       const pyResp = await fetch(
-        `http://localhost:8000/api/integration/assessment/search?name=${encodeURIComponent(name)}`,
+        rehabApiUrl(`/api/integration/assessment/search?name=${encodeURIComponent(name)}`),
       );
       if (!pyResp.ok) {
         sendJSON(res, 200, { assessments: [] });
@@ -80,7 +129,7 @@ export async function handleChatbotRoutes(
     const name = decodeURIComponent(trendMatch.name);
     try {
       const pyResp = await fetch(
-        `http://localhost:8000/api/integration/assessment/search?name=${encodeURIComponent(name)}`,
+        rehabApiUrl(`/api/integration/assessment/search?name=${encodeURIComponent(name)}`),
       );
       if (!pyResp.ok) {
         sendJSON(res, 200, { patientName: name, toolId: trendMatch.tool, dataPoints: [] });

@@ -210,7 +210,6 @@ export function createAgentLLMSlice(
           messages: llmMessages,
           patientContext,
           availableTools: state.suggestedTools as AgentToolId[],
-          systemPrompt,
         },
         {
           onToken: (token) => {

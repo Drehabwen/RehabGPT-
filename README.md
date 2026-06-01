@@ -88,6 +88,7 @@ npm install
 DEEPSEEK_API_KEY=sk-your-key-here
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
+REHAB_API_BASE=http://localhost:8000
 ```
 
 > `.env` 和 `server/data/` 已在 `.gitignore` 中，不会提交到仓库。

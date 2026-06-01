@@ -2,21 +2,10 @@
  * 小柱 后端服务 (XiaoZhu Backend Server)
  *
  * 提供：
- *   LLM Proxy:  WS   /api/chatbot/ws/chat         (流式对话，前端唯一对话通道)
- *   Integration APIs — 康复师↔家长数据通道:
- *     Family:    POST /api/integration/family/login
- *     Assessment:GET  /api/integration/assessment/summary/:patientId
- *                POST /api/integration/assessment/push
- *                GET  /api/integration/assessment/history/:patientId
- *     Plan:      GET  /api/integration/plan/pending/:patientId
- *                POST /api/integration/plan/push
- *                PATCH /api/integration/plan/:planId/status
- *     Tracking:  POST /api/integration/tracking/submit
- *                GET  /api/integration/tracking/:patientId
- *     Scale:     GET  /api/integration/scale/pending/:patientId
- *                POST /api/integration/scale/push
- *                POST /api/integration/scale/submit
- *                GET  /api/integration/scale/results/:sessionId
+ *   LLM Proxy:  WS   /api/chatbot/ws/chat         (流式自由对话)
+ *               POST /api/chatbot/chat            (非流式建议、抽取等轻量调用)
+ *   Integration APIs: /api/integration/* 由 Rehab Python 后端提供
+ *                     Node 仅在 chatbot support 路由内按需读取
  *   Chatbot Support APIs — 前端 Agent 辅助端点:
  *     History:   GET  /api/chatbot/assessment-history/:name
  *     Trend:     GET  /api/chatbot/assessment-trend/:name/:tool
@@ -31,7 +20,9 @@
 import 'dotenv/config';
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { streamChatCompletion, isConfigured, type LLMMessage } from './llmClient';
+import { streamChatCompletion, isConfigured } from './llmClient';
+import { buildLLMMessageList, DEFAULT_CHAT_SYSTEM_PROMPT, detectToolCall } from './chatMessages';
+import { REHAB_API_BASE, SERVER_PORT } from './config';
 import { initDB } from './db';
 import {
   sendJSON,
@@ -42,33 +33,7 @@ import {
 // Node 仅保留 chatbot 支持路由 + WebSocket LLM 流式对话
 import { handleChatbotRoutes } from './routes/chatbot';
 
-const PORT = parseInt(process.env.PORT || '8002', 10);
-
-// ── Tool detection regex ──
-
-const TOOL_CALL_RE = /\[TOOL:\s*(\w+)\]\s*(.+)?/i;
-
-function detectToolCall(text: string): { toolId: string; reason: string } | null {
-  const match = text.match(TOOL_CALL_RE);
-  if (!match) return null;
-  return { toolId: match[1], reason: (match[2] || '').trim() };
-}
-
-// ── Default system prompt ──
-
-const DEFAULT_SYSTEM_PROMPT = `你是"小柱"，一位温柔、专业的儿童脊柱康复AI助手。用温暖、阳光、通俗易懂的语言与家长沟通。
-
-沟通规范：
-- 语言温暖亲切，避免机器人腔
-- 禁用称呼："患者"、"病人"、"畸形"、"残疾"
-- 推荐称呼孩子："孩子"、"小朋友"、"宝贝"
-- 重点内容用口语化表达
-
-行为约束：
-1. 不做医学诊断，只用"筛查风险"等前置词汇
-2. 有背痛症状立刻建议就医（MRI检查），禁止推荐拉伸/按摩
-3. 多用"早发现早干预"等正向语言
-4. 没有数据时如实说明`;
+const PORT = SERVER_PORT;
 
 // ── HTTP Server ──
 
@@ -122,13 +87,10 @@ wss.on('connection', (ws: WebSocket) => {
         return;
       }
 
-      const messages: LLMMessage[] = [];
-      const systemPrompt = body.systemPrompt || DEFAULT_SYSTEM_PROMPT;
-      messages.push({ role: 'system', content: systemPrompt });
-
-      for (const msg of body.messages) {
-        messages.push({ role: msg.role as 'user' | 'assistant', content: msg.content });
-      }
+      const messages = buildLLMMessageList(
+        body.messages,
+        body.systemPrompt || DEFAULT_CHAT_SYSTEM_PROMPT,
+      );
 
       let fullContent = '';
 
@@ -175,5 +137,6 @@ server.listen(PORT, () => {
   console.log(`   HTTP:       http://localhost:${PORT}`);
   console.log(`   WebSocket:  ws://localhost:${PORT}/api/chatbot/ws/chat`);
   console.log(`   LLM:        ${isConfigured() ? '✅ Configured' : '❌ Not configured (set DEEPSEEK_API_KEY)'}`);
-  console.log(`   APIs:       6 chatbot support endpoints (CRUD migrated to Python :8000)\n`);
+  console.log(`   Rehab API:  ${REHAB_API_BASE}`);
+  console.log(`   APIs:       chatbot support endpoints (CRUD migrated to Python)\n`);
 });

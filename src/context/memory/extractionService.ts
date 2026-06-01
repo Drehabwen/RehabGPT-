@@ -125,7 +125,6 @@ export async function extractConversationPoints(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [
-          { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
           { role: 'user', content: extractionPrompt },
         ],
         systemPrompt: EXTRACTION_SYSTEM_PROMPT,

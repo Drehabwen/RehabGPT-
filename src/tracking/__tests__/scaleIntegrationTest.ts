@@ -9,7 +9,10 @@
  * 5. 验证数据一致性
  */
 
-const BASE_URL = 'http://localhost:8002';
+const BASE_URL =
+  (globalThis as any).process?.env?.REHAB_API_BASE ||
+  (globalThis as any).process?.env?.VITE_API_BASE ||
+  'http://localhost:8000';
 
 // ── 测试配置 ──
 
